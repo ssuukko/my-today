@@ -1,11 +1,11 @@
 # MY TODAY — 개인 생활 운영체제 (Personal Life OS)
 
 > **문서 종류:** 제품 요구사항 정의서(PRD) + 서비스 설계서 + 기술 아키텍처 + 데이터 모델/API 명세 + 개발 백로그  
-> **문서 버전:** 1.0.0  
-> **작성 기준일:** 2026-11-01 (Asia/Seoul)  
+> **문서 버전:** 1.2.0 (최초 로그인·회원가입·보안·온보딩·무료 PWA 우선 전략 추가)  
+> **작성 기준일:** 2026-11-02 (Asia/Seoul)  
 > **개발 저장소:** https://github.com/ssuukko/my-today  
 > **문서 상태:** 구현을 위한 제안 명세. 확정된 구현이나 이미 개발된 기능을 의미하지 않음.  
-> **핵심 전략:** 웹 우선 → 설치형 PWA → iOS/Android. 단일 백엔드, 모듈형 모놀리스, 개인 데이터 보호, 비용 최소화.
+> **핵심 전략:** 무료 PWA 우선 출시(PC·iPhone·Android 브라우저 홈 화면 설치) → 동일 계정·개인 데이터 동기화 → 네이티브 앱스토어 출시는 추후 별도 의사결정. Java/Spring Boot, Vue/Quasar, 영수증 카메라/OCR, 로그인 선행·개인정보 보호, 비용 최소화.
 
 ---
 
@@ -37,6 +37,9 @@
 24. [우선순위 백로그](#24-우선순위-백로그)
 25. [출시 판단 기준과 미결 사항](#25-출시-판단-기준과-미결-사항)
 26. [공식 참고 링크](#26-공식-참고-링크)
+27. [웹·iOS·Android 멀티플랫폼 구현 명세](#27-웹iosandroid-멀티플랫폼-구현-명세)
+28. [영수증 촬영·OCR·가계부 자동입력 명세](#28-영수증-촬영ocr가계부-자동입력-명세)
+29. [최초 실행·로그인·회원가입·계정 복구 상세 명세](#29-최초-실행로그인회원가입계정-복구-상세-명세)
 
 ---
 
@@ -62,6 +65,8 @@
 5. **수정 가능:** 자동분류·추천·자동 연결 결과는 사용자가 언제든 수정·해제할 수 있다.
 6. **프라이버시 우선:** 개인 데이터는 기본 비공개; 공개 범위·동의·삭제 기능을 기본 제공한다.
 7. **단순한 첫 버전:** 마이크로서비스, AI 의존, 금융계좌 자동연동 등을 초기에 무리하게 구축하지 않는다.
+8. **로그인부터 안전하게:** 최초 실행 시 로그인/회원가입으로 진입하고, 미인증 상태에서는 개인 일정·금융·투자 데이터에 접근할 수 없다.
+9. **무료 PWA 우선:** PC·iPhone·Android에서 브라우저 홈 화면에 설치하여 사용하며, 유료 앱스토어 등록은 뒤로 미룬다.
 
 ### 1.4 핵심 지표(KPI) — 제품 가설
 
@@ -116,6 +121,7 @@
 
 | 기능 | M0: 사용 가능 MVP | M1: 통합성 완성 | M2: 확장/자동화 |
 |---|---|---|---|
+| 인증/첫 실행 | 로그인·회원가입·로그아웃·세션·최초 온보딩 | 계정 복구·기기별 세션 관리·Google 로그인 | 패스키/생체인증 및 보안 고도화 |
 | 통합 홈 | 오늘 일정·할 일·지출·관심주식 카드 | 레이아웃 편집·주간 요약 | 상황별 스마트 카드 |
 | 일정 | 수동 CRUD, 월/주/일 화면 | Google Calendar 읽기 동기화 | 양방향 연동·충돌 관리 |
 | 할 일 | 생성·완료·마감·우선순위 | 하위 할 일·태그·반복 | 자연어 입력·자동 제안 |
@@ -128,7 +134,7 @@
 | 검색 | 통합 검색 | 고급 필터 | 의미 기반 검색 |
 | 외부 연동 | 없음(수동 입력 우선) | 캘린더·가격 공급자 | 인증된 연동 확대 |
 | AI | 없음 | 설명형 인사이트(규칙 기반 우선) | 선택적 생성형 AI |
-| 플랫폼 | 반응형 웹 | PWA 설치·오프라인 조회 | iOS·Android 앱 |
+| 플랫폼 | 반응형 웹 + 설치형 PWA(iPhone·Android·PC) | 오프라인 조회·홈 화면 설치 UX 개선 | 필요 시 Capacitor iOS·Android 스토어 배포 |
 
 ### 3.1 명시적 비범위(초기 제외)
 
@@ -144,6 +150,10 @@
 
 ```text
 MY TODAY
+├─ 최초 진입 (/welcome) — 미로그인 사용자: 로그인/회원가입
+├─ 로그인 (/login) / 회원가입 (/signup)
+├─ 계정 복구 (/forgot-password, /reset-password) — 메일 연동 준비 후
+├─ 초기 설정 (/onboarding) — 로그인 성공·최초 1회, 건너뛰기 가능
 ├─ 홈 (/today)
 │  ├─ 오늘 타임라인 / 지금 다음 일정
 │  ├─ 할 일·루틴 / 빠른 입력
@@ -240,6 +250,12 @@ MY TODAY
 
 | ID | 경로 | 반드시 있는 정보 | 기본 행동 |
 |---|---|---|---|
+| AUTH-UI-01 | `/welcome` | 서비스 소개·로그인·회원가입 버튼 | 로그인/회원가입으로 이동 |
+| AUTH-UI-02 | `/login` | 이메일·비밀번호·오류·로그인 유지 | 로그인·비밀번호 표시 전환 |
+| AUTH-UI-03 | `/signup` | 이메일·비밀번호·약관/정책 안내 | 계정 생성(공개 가입 시 이메일 검증) |
+| AUTH-UI-04 | `/forgot-password` | 이메일 입력·복구 안내(메일 연동 후) | 재설정 요청 |
+| AUTH-UI-05 | `/reset-password` | 새 비밀번호·확인·만료 안내 | 재설정 확정 |
+| AUTH-UI-06 | `/onboarding` | 표시 이름·시간대·기본 통화·초기 목표 | 저장 후 `/today` 진입 |
 | SCR-01 | `/today` | 오늘의 카드, 시간표, 주의 신호 | 빠른 입력 / 카드 상세 |
 | SCR-02 | `/calendar` | 월/주/일 일정, 필터 | 일정 추가·수정·삭제 |
 | SCR-03 | `/tasks` | 오늘/예정/밀린 할 일 | 완료·우선순위·마감 변경 |
@@ -434,6 +450,13 @@ Transaction EXPENSE #103
 - 순자산 = 현금성 자산 + 평가 투자자산 + 기타 자산 − 카드 부채 − 대출 부채; 동일 자산 중복 제외.
 - 빈 기간과 0원 기간을 구별한다. 수정/삭제/환불은 집계를 다시 계산한다.
 
+### 7.9 영수증 자동입력 연계
+
+- 사진 촬영 또는 이미지 업로드로 영수증의 가맹점·거래일시·최종 결제금액·세금/할인·품목을 추출한다.
+- OCR 인식 결과는 거래 확정이 아니라 **검토용 임시 초안**이다. 금액을 사용자가 확인하고 저장해야 원장에 반영된다.
+- 영수증과 기존 수동 입력·카드/계좌 가져오기 거래가 일치할 수 있으므로 중복 후보를 탐지하고 연결·건너뛰기·새 거래 생성을 선택하도록 한다.
+- `receipt_import`와 `money_transaction`은 분리하되 확정된 거래만 `money_posting`에 반영한다. 상세 정책은 **28장** 참조.
+
 ## 8. 주식·ETF·관심종목
 
 ### 8.1 지원 목표
@@ -587,6 +610,7 @@ then:
 수입       "외주비 200,000원"
 활동       "독서 25분"
 관심종목   "AAPL"
+영수증     "촬영/앨범/파일에서 자동입력"
 ```
 
 - M0: 입력 유형을 사용자가 선택하고, 타입별 간단 폼으로 확정.
@@ -669,13 +693,13 @@ then:
 |---|---|---|---|
 | Backend | **Java 21 LTS + Spring Boot(개발 시점의 지원 중인 안정 버전 고정)** | Java 경험 활용, 테스트/인증/배치 생태계 | 처음부터 과도한 버전 추격 금지 |
 | Web | **Vue 3 + TypeScript + Quasar** | 웹 UI와 PWA, 후속 Capacitor 기반 모바일 확장에 적합 | 실제 iOS/Android 네이티브 경험은 플랫폼별 검증 필요 |
-| Mobile | **Quasar + Capacitor** (M2) | 화면/상태관리 코드 재사용 가능 | 푸시·생체인증·파일·백그라운드는 플랫폼 코드/플러그인 필요 |
+| Mobile | **Quasar PWA 우선, Capacitor 후속 선택** | iPhone·Android·PC에서 홈 화면 설치, 앱스토어 비용 보류 | 네이티브 푸시/키체인/앱스토어 기능은 후속 별도 검증 |
 | DB | **PostgreSQL 16+ 계열의 유지보수 지원 버전** | ACID, JSONB, 인덱스, 정밀 NUMERIC, 검색 | 선택 버전은 배포 환경 호환성 확인 |
 | Persistence | Spring Data JPA + QueryDSL 또는 명시적 SQL(JdbcClient) | 일반 CRUD 간결·복잡한 리포트 SQL 제어 | 금융 원장은 명시적 쿼리/트랜잭션 우선 |
 | Cache | Spring Cache + Caffeine (초기) | 별도 서버 불필요 | 다중 인스턴스로 확장 시 Redis 검토 |
 | Migration | Flyway | DB 스키마 버전 관리 | 운영 데이터 수동 수정 금지 |
 | API contract | Springdoc OpenAPI + 코드 생성(선택) | 웹-서버 타입 호환성 | Spring Boot 주 버전과 라이브러리 호환 확인 |
-| Security | Spring Security, OAuth2/OIDC, 서버 세션 | 검증된 인증/인가, 웹 쿠키 보안 | 모바일 시 인증 모델 재평가 |
+| Security | Spring Security, 이메일/비밀번호(M0) + 서버 세션 + CSRF 보호 | PWA의 무료 독립 계정 로그인, HttpOnly 쿠키 | Google OIDC·패스키·네이티브 OAuth는 후속 |
 | Jobs | Spring Scheduler + DB 작업 잠금 | 단일 인스턴스에서 가볍게 시작 | 확장 시 ShedLock/작업 큐 검토 |
 | Chart | Apache ECharts 또는 Chart.js | 자산·지출·시세 차트 | 사용한 라이브러리 라이선스 확인 |
 | UI State | Pinia + Vue Query(TanStack Query Vue) | 캐시/서버 상태 분리 | 도메인 데이터 원본은 서버 |
@@ -837,7 +861,11 @@ notification.requested | notification.sent | notification.failed
 |---|---|---|
 | `app_user` | id, email, display_name, timezone, base_currency, status | `email_normalized` 유니크 |
 | `user_setting` | user_id, dashboard_layout, quiet_hours, locale | user_id 유니크 |
-| `auth_identity` | user_id, provider, provider_subject | `(provider, provider_subject)` 유니크 |
+| `auth_local_credential` | user_id, password_hash, password_changed_at, failed_attempts/locked_until(필요 시) | user_id PK/FK, 해시는 인증정보 전용 테이블 분리 |
+| `auth_identity` | user_id, provider, provider_subject | `(provider, provider_subject)` 유니크 — 외부 로그인 도입 시 |
+| `auth_security_event` | user_id(nullable), event_type, occurred_at, ip_hash(optional), request_id | 이벤트/기간별 보안 감사(비밀·원문 IP 최소화) |
+| `email_verification_token`(후속) | user_id, token_hash, expires_at, consumed_at | 단일 사용·만료·재전송 제한 |
+| `password_reset_token`(후속) | user_id, token_hash, expires_at, consumed_at | 단일 사용·만료·기존 세션 무효화 |
 | `external_connection` | user_id, provider, encrypted_tokens, scopes, expires_at, status | 제공자별 연결 키 |
 | `calendar` | user_id, name, color, source, external_id | `(user_id,source,external_id)` 조건 유니크 |
 | `calendar_event` | user_id, calendar_id, start/end, all_day, timezone, rrule, external_id | `(user_id,start_at)` + 외부키 |
@@ -879,6 +907,8 @@ notification.requested | notification.sent | notification.failed
 
 ```mermaid
 erDiagram
+    APP_USER ||--o| AUTH_LOCAL_CREDENTIAL : authenticates
+    APP_USER ||--o{ AUTH_SECURITY_EVENT : audit
     APP_USER ||--o{ CALENDAR : owns
     APP_USER ||--o{ TASK : owns
     APP_USER ||--o{ ROUTINE : owns
@@ -1055,6 +1085,15 @@ WHERE a.id = :account_id AND a.user_id = :user_id;
 
 | HTTP | 경로 | 기능 | 단계 |
 |---|---|---|---|
+| GET | `/auth/csrf` | 쿠키 세션 기반 CSRF 토큰 초기화(읽기 전용) | M0 |
+| POST | `/auth/signup` | 이메일·비밀번호 회원가입 | M0 |
+| POST | `/auth/login` | 이메일·비밀번호 로그인 및 세션 회전 | M0 |
+| POST | `/auth/logout` | 현재 세션 로그아웃·쿠키 무효화 | M0 |
+| GET | `/auth/session` | 로그인 여부·온보딩 상태(민감정보 제외) | M0 |
+| POST | `/auth/password/forgot` | 이메일 재설정 링크 발송(항상 동일한 외부 응답) | M1 |
+| POST | `/auth/password/reset` | 단회용 토큰으로 비밀번호 재설정 | M1 |
+| POST | `/auth/email/verify` | 이메일 검증 토큰 확정(공개 가입 전 필수) | M1/공개 가입 시 |
+| POST | `/auth/sessions/revoke-all` | 전체 기기 세션 종료(재인증 필요) | M1 |
 | GET | `/users/me` | 로그인 정보/시간대/통화 | M0 |
 | PATCH | `/users/me/settings` | 사용자 설정 | M0 |
 | GET | `/dashboard/today?date=YYYY-MM-DD` | 오늘 종합 홈 | M0 |
@@ -1318,9 +1357,11 @@ public record QuoteResult(
 
 ### 19.1 인증·인가 정책
 
-- M0: Google OIDC 로그인 또는 이메일/비밀번호(둘 중 하나를 먼저 선택); 제품 계정 식별은 `app_user.id`로 통일.
+- **M0 확정 방향:** 무료 PWA를 위한 이메일/비밀번호 로그인 + Spring Security 서버 세션. 제품 계정 식별은 `app_user.id`로 통일. 인증 흐름 상세는 29장 참조.
+- **가입 정책:** 초기 개인용 베타는 초대/사전 생성 계정으로 제한 가능. 누구나 가입 가능한 공개 서비스 전환 전에는 실제 이메일 소유 확인·비밀번호 재설정 발송 경로를 반드시 구현한다.
+- Google/OIDC 소셜 로그인은 M1 선택 기능이며 Google Calendar 계정 연동과는 구분한다.
 - Spring Security 서버 세션+`HttpOnly`, `Secure`, `SameSite` 쿠키 우선(동일 사이트 웹 기준). OAuth 이후 세션 고정 보호.
-- 웹의 상태 변경 요청은 CSRF 방어, CORS 허용 출처 화이트리스트, 로그인·로그아웃 정책.
+- 웹의 상태 변경 요청은 로그인/가입/로그아웃을 포함해 CSRF 방어, CORS 허용 출처 화이트리스트, 로그인·로그아웃 정책. `Origin`/`Referer` 검증도 보완책으로 사용.
 - 모바일 확장 시 OAuth Authorization Code + PKCE, 시스템 브라우저, OS secure storage를 사용하고 토큰은 웹 쿠키 모델을 그대로 복제하지 않는다.
 - 민감 기능(내보내기·전체 삭제·연결 계정 변경)은 최근 로그인 재인증 검토.
 - 관리자용 백도어와 개발자 공통 비밀번호 금지.
@@ -1338,7 +1379,7 @@ public record QuoteResult(
 - `.env`, OAuth client secret, 증권 API Key/Secret, DB 비밀번호, refresh token은 Git에 커밋 금지.
 - 시크릿 저장소 또는 서버 환경변수 사용; 운영환경 로그/에러/백업/스크린샷 노출 금지.
 - 외부 OAuth refresh token과 민감 메모는 저장 데이터 암호화(AES-GCM 등 인증 암호화), 키 회전 계획.
-- 인증 비밀번호 자체를 보관하는 경우 Argon2id 또는 검증된 PasswordEncoder 사용.
+- 이메일/비밀번호 로그인 구현 시 평문·가역 암호화 저장을 금지하고 **Argon2id(운영 자원에 맞춰 튜닝) 또는 검증된 Spring PasswordEncoder**로 단방향 해시만 저장한다.
 - HTTPS, HSTS, 보안 헤더, API 호출량 제한, IP/기기 이상 로그인 방어.
 
 ### 19.4 개인정보 최소화 및 권리
@@ -1497,11 +1538,13 @@ public record QuoteResult(
 - PostgreSQL Docker Compose, Flyway, 프로파일 local/test/prod 분리.
 - GitHub Actions CI(백엔드 테스트, 프런트 빌드, 린트).
 - 공통 에러 응답, 공통 시계/시간대, 로깅 requestId, OpenAPI 문서.
-- 로그인 방식 1개 선정, 사용자 데이터 격리 기본 구조 완성.
+- **최초 화면(`/welcome`) → 로그인(`/login`)/회원가입(`/signup`) → 최초 설정(`/onboarding`) → 홈(`/today`)** 구현. 비인증 보호 라우트 접근 제한 및 `/auth/session` 연동.
+- 이메일/비밀번호 회원 인증, CSRF·세션 보안·로그아웃·회원가입 유효성 검증. 공개 가입을 열기 전에 이메일 검증/재설정 발송 체계 마련.
+- 사용자 데이터 격리 기본 구조 완성. PWA manifest/HTTPS/홈 화면 설치 기반 구성.
 
 **산출물:** `apps/web`, `services/api`, `infra`, `docs`, 로컬 실행 매뉴얼, 첫 GitHub Actions 성공.
 
-**완료 조건:** 새 PC에서 README 명령대로 실행 가능, DB 마이그레이션 성공, 인증된 `/api/v1/users/me` 응답.
+**완료 조건:** 새 PC에서 README 명령대로 실행 가능, DB 마이그레이션 성공, 회원가입/로그인→`/api/v1/users/me`→로그아웃 동작, 비로그인 홈/가계부 접근 차단, iPhone/Android 브라우저에서 로그인 화면 정상 표시.
 
 ### Phase 1 — 오늘/할 일/일정 최소 사용 제품
 
@@ -1570,17 +1613,16 @@ public record QuoteResult(
 
 **완료 조건:** 주식 평가액과 가계부 현금 계좌 사이의 이중집계가 없고, 환율 미확보 시 정확한 미집계 상태 표시.
 
-### Phase 7 — iOS·Android 및 고도화
+### Phase 7 — 네이티브 iOS·Android 정식 배포(선택, 후순위)
 
-**구현할 것**
+**구현할 것(진행 결정 이후)**
 
-- Quasar + Capacitor 패키징 가능성 검증.
-- 모바일 시스템 인증/안전한 토큰 저장/플랫폼 푸시 구현.
-- 폰 해상도·접근성·입력 품질 검증, 앱 심사 요건 확인.
-- 필요하면 이후 React Native 등으로 UI 아키텍처 재평가.
-- 공개 서비스 전환 시 데이터 라이선스/OAuth 검증/개인정보 법률 검토 후 별도 출시.
+- **1차 무료 PWA 출시에 이 단계는 필요하지 않다.** 아이폰 Safari·Android Chrome에서 홈 화면 설치, 사진 촬영/선택, 웹 기반 무료 OCR을 먼저 검증한다.
+- 필요해지면 Quasar + Capacitor 네이티브 패키징·OS 카메라/인증·플랫폼 알림을 추가한다.
+- 플랫폼별 서명/스토어 등록/심사 비용은 진행 시점에 재평가한다.
+- 폰 해상도·접근성·입력 품질을 재검증하고, 공개 서비스 전환 시 데이터 라이선스/OAuth/개인정보 법률을 검토한다.
 
-**완료 조건:** 공통 API/데이터를 유지하면서 웹과 모바일의 기본 시나리오가 동일하게 동작.
+**완료 조건(진행 시):** PWA에서 사용하던 계정과 공통 API/데이터를 유지하며, 네이티브 앱에서 기본 시나리오가 동작한다.
 
 ## 23. GitHub 프로젝트 구성과 개발 규칙
 
@@ -1692,6 +1734,13 @@ my-today/
 |---|---|---|---|---|
 | CORE-001 | P0 | 모노레포/CI/로컬 개발환경 | 없음 | 웹·API·DB 실행, CI 성공 |
 | CORE-002 | P0 | 인증·세션·사용자 설정 | CORE-001 | 사용자별 데이터 격리 |
+| AUTH-001 | P0 | 첫 화면·로그인·회원가입·입력 검증·오류 UX | CORE-001 | 미로그인 `/today` 진입 시 로그인 이동, 성공 시 홈 |
+| AUTH-002 | P0 | Spring Security 인증·CSRF·세션 회전·로그아웃 | CORE-001 | 쿠키 보안·로그아웃 후 접근 차단 |
+| AUTH-003 | P0 | 초기 설정/시간대·통화·온보딩 건너뛰기 | AUTH-001, AUTH-002 | 최초 1회 설정 후 동일 계정 데이터 유지 |
+| AUTH-004 | P0 | 계정 간 권한 격리·로그인 속도 제한·보안 이벤트 | AUTH-002 | IDOR·무차별 대입 방어 테스트 통과 |
+| AUTH-005 | P1 | 이메일 검증·비밀번호 분실/재설정·메일 전송 | AUTH-002 | 만료/1회성 토큰·계정 존재 유출 방지; 공개 가입 전 필수 |
+| AUTH-006 | P1 | 모든 기기 세션 조회·철회 / 최근 로그인 재확인 | AUTH-002 | 다른 기기 세션 만료 확인 |
+| AUTH-007 | P2 | Google 로그인 / WebAuthn 패스키 | AUTH-002 | 계정 연결·중복 식별·실기기 보안 검증 |
 | CORE-003 | P0 | 공통 오류/페이징/시계/멱등 기본 | CORE-001 | 계약 테스트 |
 | UI-001 | P0 | 반응형 레이아웃/내비게이션 | CORE-001 | 모바일/PC 대응 |
 | UI-002 | P0 | 통합 홈 카드/빠른 입력 | CORE-002 | 각 화면 이동/입력 |
@@ -1727,14 +1776,19 @@ my-today/
 | OPS-001 | P0 | 백업·복구·모니터링 | CORE-001 | 격리 환경 복원 성공 |
 | OPS-002 | P1 | PWA 설치/오프라인 읽기 | UI-001 | 미연결 시 상태 설명 |
 | OPS-003 | P1 | 데이터 내보내기/삭제 | CORE-002 | 사용자 데이터 완전성 |
-| MOBILE-001 | P2 | Capacitor 앱·보안 저장소·푸시 | OPS-002 | iOS/Android E2E |
+| MOBILE-001 | P2 | 후속 Capacitor iOS/Android 패키징·OS 카메라·보안 저장소 | UI-001, CORE-002 | 진행 결정 시 양 OS 빌드 검증 |
+| MOBILE-002 | P2 | 후속 앱스토어 배포 설정·푸시·심사 준비 | MOBILE-001, NOTI-001 | 진행 결정 시 스토어 테스트/권한 고지 검증 |
+| OCR-001 | P1 | PWA 영수증 촬영·이미지 선택 UI | UI-001 | iPhone Safari/Android Chrome/PC에서 촬영 또는 파일 선택 성공 |
+| OCR-002 | P1 | 한국어 OCR·텍스트 구조화·검토 초안 | OCR-001, MNY-002 | 금액·일시·가맹점 후보 제시, 불확실성 표시 |
+| OCR-003 | P1 | 중복 검사·원장 확정·연결 | OCR-002, MNY-003 | 중복으로 두 건 등록되지 않음 |
+| OCR-004 | P2 | 품목별 지출 분할·고도화 파서 | OCR-003 | 할인·취소·품목 합계 처리 |
 | AI-001 | P2 | 설명 가능한 규칙 기반 인사이트 | DASH-002 | 근거 지표 제공 |
 | AI-002 | P2 | 생성형 AI 보조 기능(선택) | AI-001 | 동의·비용·실행 안전장치 |
 
 ### 24.1 개발을 시작할 첫 10개 이슈 순서
 
 1. `CORE-001` — Gradle/Spring Boot/Quasar/PostgreSQL 실행 및 CI.
-2. `CORE-002` — 로그인/사용자/타임존·통화 설정.
+2. `CORE-002` + `AUTH-001~004` — 로그인·회원가입·첫 화면·세션/CSRF·온보딩·보안 기본. (`AUTH-005`는 공개 가입 전 선행)
 3. `CORE-003` — 표준 API 오류, Clock, ID 생성 및 멱등 도구.
 4. `UI-001` — 모바일/PC 공통 기본 레이아웃.
 5. `TASK-001` — 할 일 CRUD 및 완료 처리.
@@ -1750,7 +1804,10 @@ my-today/
 
 ### 25.1 개인용 첫 출시(M0) 게이트
 
-- [ ] 로그인/사용자별 데이터 격리 완료.
+- [ ] 첫 실행 시 로그인/회원가입 화면이 표시되고, 인증 후에만 대시보드 진입 가능.
+- [ ] 회원가입/로그인·로그아웃·세션 만료·온보딩·다른 사용자 데이터 접근 차단 테스트 완료.
+- [ ] 공개 가입을 제공한다면 이메일 검증과 안전한 비밀번호 재설정/메일 발송 구현 완료.
+- [ ] iPhone·Android에서 Safari/Chrome PWA 홈 화면 설치·동일 계정 로그인 가능(네이티브 스토어 등록은 범위 밖).
 - [ ] 오늘 화면에서 일정·할 일·루틴·지출·관심종목 조회 가능.
 - [ ] 할 일 생성/완료가 모바일과 데스크톱에서 정상 동작.
 - [ ] 실제 활동을 기록하고 누적량/목표 달성률이 정확히 보임.
@@ -1838,10 +1895,975 @@ MY TODAY의 경쟁력은 단순히 **할 일+가계부+주식 앱을 합쳤다**
 
 ---
 
+## 27. 웹·iOS·Android 멀티플랫폼 구현 명세
+
+> **현재 결정 (ADR-0005 개정 제안):** 1차는 **무료 PWA**를 PC/아이폰/안드로이드에서 사용한다. 최초 실행부터 로그인·회원가입을 필수로 하고 서버에서 사용자 데이터를 분리한다. Capacitor 기반 네이티브 앱과 App Store/Google Play 정식 배포는 사용성 검증 후로 미룬다. **PWA와 네이티브의 모든 기능이 같다고 가정하지 않는다.**
+
+### 27.1 제품 지원 목표 및 범위
+
+| 기능/플랫폼 | Web(PC/모바일 브라우저) | iOS(아이폰) | Android(갤럭시 등) | 출시 기준 |
+|---|---|---|---|---|
+| 오늘 홈·일정·할 일·루틴·성장 | O | O | O | 동일 계정·동일 데이터 |
+| 가계부 수동 입력·예산·자산 | O | O | O | 원장 정합성 동일 |
+| 관심종목·시세·알림 조건 | O | O | O | 제공 권한/기준시각 동일 |
+| 영수증 이미지 파일/앨범 선택 | O | O | O | 권한 거부 시 대안 제공 |
+| 영수증 즉시 촬영 | 웹캠/파일 capture 지원 범위 | Safari 카메라 촬영 요청·파일 선택 | Chrome 카메라 촬영 요청·파일 선택 | 허용 실패/미지원 시 이미지 선택 대안 |
+| 영수증 OCR | 무료 브라우저 OCR 또는 허용 시 서버 OCR | 동일 웹 OCR/서버 처리 | 동일 웹 OCR/서버 처리 | PWA에서 네이티브 ML Kit 필수 아님 |
+| 푸시·로컬 알림 | 브라우저 제약/권한 | iOS 홈 화면 PWA·지원 OS/권한 범위 | Chrome 웹 푸시 지원 범위 | 초기 인앱 알림 우선, 푸시 도착 보장 불가 |
+| 생체인증·안전한 자격증명 저장 | 서버 세션 쿠키 우선, WebAuthn 후속 | 동일 세션 쿠키 우선, Passkey 후속 | 동일 세션 쿠키 우선, Passkey 후속 | Face ID/지문은 기본 로그인 필수 아님 |
+| 오프라인 열람 | 선택적 캐시 | 선택적 캐시 | 선택적 캐시 | 민감 정보 노출 억제 |
+| 앱 설치·배포 | HTTPS URL/PWA | Safari 홈 화면에 추가(PWA) | Chrome 앱 설치/홈 화면에 추가(PWA) | 1차 스토어 비용 0원, 후속 앱스토어 별도 |
+
+**포함하지 않는 가정:** Android 전용 SMS 자동 수집, iPhone의 임의 은행 앱 거래내역 읽기, iOS·Android 전체 앱 화면 자동 캡처는 공통 기능이 아니다. 타 앱 데이터 자동 수집·OS 우회 접근을 기본 요구사항으로 두지 않는다.
+
+### 27.2 기술 선택 — 왜 Quasar PWA 우선 + Capacitor 후속인가
+
+- `apps/web`: Vue 3 + TypeScript + Quasar. 동일 화면·상태관리·도메인 컴포저블을 브라우저, PWA, 후속 Android/iOS 앱에서 최대한 공유한다. 최초 배포는 설치형 PWA로 한다.
+- `Capacitor`: **현재는 빌드 필수 조건이 아니다.** 후속 시 Quasar 웹 빌드를 iOS/Android 컨테이너로 패키징하고 Java/Kotlin·Swift 플러그인에 접근한다.
+- `services/api`: Java 21 + Spring Boot + PostgreSQL. 일정·원장·지출·시세·계정은 기기별이 아닌 서버에서 한 번만 구현한다.
+- `apps/web/src/platform`: 카메라·OCR·알림·안전 저장소를 기능별 추상화한 플랫폼 어댑터. 단순 화면 코드는 `Capacitor.isNativePlatform()` 등에 직접 의존하지 않는다.
+- `apps/web/src/features/receipt`: 플랫폼과 독립적인 영수증 검토 폼·추출 결과 표시·중복 확인·원장 확정 흐름.
+
+```mermaid
+flowchart TB
+  W[PC 웹 / 모바일 웹] --> U[Vue 3 + Quasar 공통 UI]
+  I[iOS 앱] --> C[Capacitor 네이티브 브리지]
+  A[Android 앱] --> C
+  C --> U
+  U --> P[ReceiptCapturePort / OCRPort / NotificationPort]
+  P --> IP[iOS Swift: 카메라/ML Kit/보안 저장소]
+  P --> AP[Android Kotlin: 카메라/ML Kit/보안 저장소]
+  P --> WP[Web: 파일 업로드 / 서버 OCR 선택]
+  U --> S[Spring Boot REST API]
+  S --> DB[(PostgreSQL)]
+  S --> MD[시세/일정 공급자 - 별도 연동]
+```
+
+**대안:** 앱 전용 복잡한 애니메이션, 대용량 네이티브 백그라운드 처리, 플랫폼 일체감이 주요 경쟁력이 되면 React Native/Expo 또는 Flutter를 별도 ADR로 비교한다. 현재는 단일 개발자 생산성과 Vue 기반 웹 재사용에 우선순위를 둔다.
+
+### 27.3 권장 폴더 구조
+
+```text
+apps/web/
+  quasar.config.ts
+  capacitor.config.ts                # Capacitor 버전과 빌드 모드에 따라 위치 확인
+  src/
+    features/receipt/
+      components/ReceiptCaptureButton.vue
+      components/ReceiptReviewForm.vue
+      composables/useReceiptImport.ts
+      models/receipt.ts
+    platform/
+      capture/ReceiptCapturePort.ts
+      capture/webCapture.ts
+      capture/nativeCapture.ts
+      ocr/ReceiptOcrPort.ts
+      ocr/nativeMlKitOcr.ts
+      ocr/webServerFallback.ts
+      auth/SecureCredentialStore.ts
+      notifications/NotificationPort.ts
+    api/receiptApi.ts
+  src-capacitor/                    # Quasar Capacitor 모드 기준 예시
+    ios/                            # Xcode 프로젝트/네이티브 확장
+    android/                        # Android Studio 프로젝트/네이티브 확장
+services/api/src/main/java/com/mytoday/
+  receipt/
+    api/
+    application/
+    domain/
+    infrastructure/
+```
+
+> Capacitor 설정 파일 위치/플랫폼 프로젝트 트리는 Quasar CLI·Capacitor 메이저 버전과 프로젝트 초기화 모드에 따라 달라질 수 있다. 실제 설치한 조합에 맞춰 `quasar mode add capacitor` 등 공식 가이드로 초기화한 결과가 우선이다.
+
+### 27.4 플랫폼 어댑터 계약 (프런트)
+
+```ts
+export type CaptureOrigin = 'CAMERA' | 'PHOTO_LIBRARY' | 'FILE';
+export interface CapturedReceipt {
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf';
+  bytes: Blob;
+  originalFileName?: string;
+  source: CaptureOrigin;
+}
+export interface OcrLine {
+  text: string;
+  box?: { x: number; y: number; width: number; height: number };
+  confidence?: number | null; // SDK별 미제공이면 null
+}
+export interface ReceiptOcrPort {
+  recognize(input: CapturedReceipt, languages: string[]): Promise<OcrLine[]>;
+}
+export interface ReceiptCapturePort {
+  capture(origin: CaptureOrigin): Promise<CapturedReceipt | null>;
+}
+```
+
+- SDK의 confidence 값은 플랫폼과 모델에 따라 부재할 수 있으므로 임의 생성하지 않는다.
+- UI가 참조하는 타입은 `ReceiptCapturePort`에 고정한다. 기기별 구현 차이는 Adapter 안에 숨긴다.
+- PDF는 기본 카메라 촬영 이미지와 처리 경로가 다르므로 후속 범위로 분리 가능.
+- Web의 서버 OCR은 업로드 전에 사용자 동의와 보존 정책을 고지한다.
+
+### 27.5 카메라 및 미디어 권한
+
+**iOS**
+
+- `@capacitor/camera`를 사용하여 촬영·앨범 선택을 호출한다.
+- `Info.plist`에 실제 이용 이유를 설명한 `NSCameraUsageDescription`, 필요 시 사진 라이브러리 사용 목적 문구를 제공한다.
+- 권한 거부/제한된 사진 접근/설정에서 철회된 경우에도 파일 선택 경로를 제공한다.
+- 원본 사진이 위치 메타데이터(EXIF GPS)를 포함하면 원칙적으로 제거하고, 원본 보존은 선택적.
+
+**Android**
+
+- 카메라·Android Photo Picker를 우선 활용하고 OS 버전별 파일 접근 정책에 맞춘다.
+- 전체 갤러리 접근 권한을 불필요하게 요구하지 않는다.
+- Activity 종료/메모리 부족 시 촬영 결과 복원, 앱 백그라운드 복귀 시 중복 등록을 테스트한다.
+
+**Web**
+
+- `<input type="file" accept="image/*" capture="environment">`는 촬영을 요청할 수 있지만 실제 동작은 브라우저/기기에 좌우된다.
+- 사용자는 드래그 앤 드롭·파일 선택으로도 업로드할 수 있어야 한다.
+
+### 27.6 인증 및 기기 간 동기화
+
+- 공통 사용자 계정 1개가 웹·아이폰·안드로이드의 데이터 원본을 공유하며, 첫 진입은 `/welcome` 또는 `/login`이다. 최초 로그인 완료 시 `/onboarding` 이후 `/today`로 이동한다.
+- 1차 **PWA 웹은 `HttpOnly / Secure / SameSite` 속성의 서버 세션 쿠키**를 사용한다. `/api/v1`을 동일 출처로 리버스 프록시하여 쿠키·CSRF·CORS 운영을 단순화한다.
+- 네이티브 앱의 OAuth2/OIDC는 시스템 브라우저와 Authorization Code + PKCE 기반으로 설계하고, 플랫폼별 콜백/딥링크/토큰 재발급 정책을 ADR로 확정한다.
+- 네이티브 자격증명은 iOS Keychain/Android Keystore 지원 보안 저장소를 사용한다. 일반 `localStorage`에 refresh token 장기 보관 금지.
+- 서버는 매 API 요청마다 사용자를 식별하고 `user_id` 소유권을 검증한다.
+- 양방향 동기화의 초기 원칙은 **서버가 최종 권위 원본(authoritative source)**. 목록은 페이지/수정시각으로 조회, 수정은 `version`과 충돌(409)을 처리한다.
+- 민감한 가계부·투자 데이터는 알림 내용에 상세 금액 노출 여부를 사용자 설정으로 제어한다.
+
+### 27.7 모바일 오프라인 정책
+
+| 동작 | 온라인 | 오프라인 V1 | 오프라인 V2(후속) |
+|---|---|---|---|
+| 오늘 목록 보기 | 최신 | 마지막 동기화 내용(명확히 표시) | 동일 |
+| 할 일 완료 | 즉시 저장 | 로컬 임시 표시 또는 입력 차단 | 명령 큐+충돌 해결 |
+| 지출 확정 원장 | 즉시 확정 | 확정 불가(초안만 로컬 저장) | 재접속 시 사용자 확인 후 전송 |
+| 영수증 사진 촬영·OCR | 처리 가능 | 온디바이스 OCR 후 초안 보관 가능 | 재접속 후 원장 확정 |
+| 주식 현재가 | 최신 공급자 기준 | 캐시+시세 시각/오프라인 배지 | 동일 |
+
+**절대 금지:** 오프라인 임시 지출을 서버 확정 거래로 표시하거나, 네트워크 회복 시 동일 영수증을 무조건 중복 반영하는 동작.
+
+### 27.8 푸시/알림과 백그라운드 작업
+
+- 서버 알림 데이터 모델은 통합. 채널은 `IN_APP`, `WEB_PUSH`, `IOS_PUSH`, `ANDROID_PUSH`, `LOCAL`로 분리.
+- iOS 원격 푸시는 APNs 경로/설정, Android는 FCM 경로/설정 검토. 실제 도착 시간은 OS 배터리·권한·집중모드에 좌우되므로 정시 보장 불가.
+- 기기별 푸시 토큰은 `device_registration(user_id, platform, push_token_hash, encrypted_token, last_seen_at, revoked_at)` 등에 저장하고 로그에 토큰을 남기지 않는다.
+- 일정 알림은 quiet hours, 타임존, 알림 설정과 서버 중복방지 키를 적용한다.
+- 영수증 OCR은 앱 화면에서 빠르게 끝나는 처리를 우선; 대량 이미지/서버 OCR은 비동기 작업으로 분리한다.
+- iOS/Android 모두 임의 시점 백그라운드 실행을 보장하지 않으므로 서버 배치 및 OS 알림 서비스를 기준으로 설계한다.
+
+### 27.9 빌드·개발 장비·출시
+
+| 항목 | Web | Android | iOS |
+|---|---|---|---|
+| 개발 IDE | VS Code/IntelliJ | Android Studio | Xcode (macOS 필요) |
+| 테스트 장비 | PC/브라우저 | 실제 Android + 에뮬레이터 | 실제 iPhone + 시뮬레이터 |
+| 빌드 산출물 | HTML/CSS/JS 정적 자원 | AAB/APK | IPA(배포 파이프라인) |
+| 배포 대상 | HTTPS 서버 | Google Play 내부 테스트/정식 | TestFlight/App Store |
+| 추가 검토 | 도메인/HTTPS | 서명 키·Play Console 정책 | Apple Developer 계정·서명·심사 |
+
+- Windows에서 웹/백엔드/Android를 주로 개발할 수 있지만 **iOS 정식 빌드·서명·시뮬레이터 개발에는 macOS/Xcode 환경이 필요**하다.
+- App Store/Google Play의 등록 비용, 테스트/심사 규정, 지원 최소 OS는 실제 신청 시점 공식 문서를 다시 확인한다.
+- 웹 버전만 래핑한 앱은 스토어 심사에서 추가 사용자 가치가 부족하다고 평가될 가능성이 있어 카메라·오프라인 OCR·네이티브 알림 등 실질적 모바일 기능을 제공한다.
+
+### 27.10 멀티플랫폼 수용 테스트
+
+- [ ] 동일 계정이 PC·iPhone·Android 3개 기기에서 로그인 가능.
+- [ ] iPhone에서 등록한 할 일이 Android와 웹에 반영되고, 역방향도 정상.
+- [ ] 같은 영수증을 Android/아이폰에서 동시에 등록해도 중복 검사 후 확정 거래가 2건 생기지 않음.
+- [ ] 카메라 허용/거부·앨범 선택·이미지 재촬영·앱 중단 후 복구 테스트.
+- [ ] 한글 영수증 + 영어 가맹점명 + 원화 금액 조합 인식.
+- [ ] 시간대·서머타임·기기 로컬 시간 조작 시 서버 원장이 불일치하지 않음.
+- [ ] HttpOnly 세션 쿠키/CSRF/로그아웃·다른 사용자 접근 차단을 iPhone·Android·PC에서 확인.
+- [ ] 오프라인 상태에서 캐시 시각 표시, 원장 확정이 잘못되지 않음.
+- [ ] PWA 아이콘을 홈 화면에 추가한 뒤 로그인·재실행·삭제까지 확인.
+- [ ] (후속 네이티브 단계만) Keychain/Keystore, 스토어 내부 테스트·서명·푸시 검증.
+
+### 27.11 개발 순서 재정의
+
+1. Phase 0: 로그인·회원가입·비인증 가드 + Quasar 반응형 PWA 화면/서비스워커 캐시 정책을 구현한다. iPhone Safari·Android Chrome 테스트부터 수행한다.
+2. Phase 1~2: 로그인 후 오늘/일정/루틴을 웹에서 완성. iPhone·Android 홈 화면 설치·동일 계정 동기화를 실기기로 검증한다.
+3. Phase 3: 가계부 원장 완성 후 **영수증 촬영/파일 선택·무료 OCR·검토 후 저장**을 PWA에 추가한다.
+4. Phase 4~6: 시세·성장·알림을 단일 API로 연동. 무료 호스팅/자체 보유 장비의 용량과 비용 제한을 확인한다.
+5. Phase 7(후속 결정): 필요해질 때 Capacitor 네이티브 빌드·푸시/보안·App Store/Google Play 심사를 별도 프로젝트로 진행한다. **1차 PWA 출시의 필수 조건이 아니다.**
+
+---
+
+## 28. 영수증 촬영·OCR·가계부 자동입력 명세
+
+> **기능 목표:** 카메라로 영수증 촬영(또는 스크린샷/앨범에서 선택) → 한국어/영어 OCR → 가맹점·일시·총결제금액·품목·세금/할인 후보 추출 → 카테고리 자동 추천 → **사용자 확인 후** 가계부에 거래 1건으로 확정. 원본 이미지 업로드 없이 동작하는 온디바이스 경로를 우선한다.
+
+### 28.1 기능 범위와 출시 우선순위
+
+| 영역 | 첫 버전(P1) | 후속(P2) |
+|---|---|---|
+| 종이 영수증 | 사진·갤러리 업로드 | 왜곡 보정·다중 페이지 합치기 |
+| 전자 영수증 | 캡처 이미지 업로드 | PDF·메일 연동(동의 필요) |
+| 텍스트 인식 | 한국어+영문+숫자+기호 | 일본어 등 다국어 확대 |
+| 추출 필드 | 가맹점/일시/총액/통화/결제수단 후보 | 공급가액/부가세/할인/포인트 정밀화 |
+| 카테고리 | 가맹점 룰/키워드 기반 추천 | 사용자 수정 이력 기반 개인화 |
+| 품목 | 인식되면 목록 표시 | 품목별 예산 분할/수량·단가 정합성 |
+| 원장 반영 | **검토 후 1건 확정** | 신뢰도+사용자 승인 정책 내 원클릭 확정 |
+| 중복 방지 | 이미지/텍스트 지문 + 거래 후보 | 카드 사용 내역 CSV/외부 계좌 매칭 |
+| AI | 기본 OFF, 규칙 기반 | 사용자가 동의할 때만 LLM 후보 추론 |
+
+### 28.2 핵심 UX 시나리오
+
+```text
+MY TODAY 홈
+  [+] 누르기
+    ├─ 할 일
+    ├─ 일정
+    ├─ 지출 직접 입력
+    └─ [영수증으로 지출 입력]
+          ↓
+      [사진 촬영] [사진/스크린샷 선택] [파일 업로드]
+          ↓
+      촬영 가이드 표시: 빛 반사/흔들림/영수증 끝부분/최종결제금액
+          ↓
+      이미지 미리보기 → 자르기/회전/다시 찍기
+          ↓
+      OCR 수행 (모바일: 기기 내부 우선, 웹: 설정한 서버 처리)
+          ↓
+      필드 추출/검토 초안 생성 (확정 원장과 분리)
+          ↓
+      가맹점: 스타벅스                   [수정]
+      결제일시: 2026-11-02 12:30       [수정]
+      총결제액: 9,500 KRW             [수정] ★ 필수
+      카테고리: 카페                    [변경]
+      결제 계좌/카드: 미지정            [선택] ★ 원장 확정용
+      품목: 아메리카노 2잔 등            [보기]
+      OCR 확인 필요: 세금/할인 충돌      [원본 보기]
+          ↓
+      기존 거래와 일치 후보? -- YES --> [기존 거래에 영수증 첨부] [새 거래] [취소]
+          |
+          NO
+          ↓
+      [가계부에 저장] (명시적 사용자 확인)
+          ↓
+      POSTED 거래 및 posting 생성 → 이번 달 예산/오늘 지출 갱신
+```
+
+**UX 원칙:** 자동 인식은 자동 **입력 초안**을 뜻한다. 영수증만 봐서는 '내 지출'인지, 어떤 계좌로 결제했는지, 환불/법인 지출인지 확실하지 않을 수 있어 **무조건 자동 확정 금지**. 초기에는 미지정 결제수단인 경우 원장 확정 전에 선택을 요구한다.
+
+### 28.3 OCR 전략: 로컬 우선·서버 선택적 폴백
+
+1. **iOS/Android:** Google ML Kit Text Recognition v2 (한국어 Korean 모델 + 필요 시 Latin 모델)로 온디바이스 텍스트 블록/줄 인식. iOS는 Apple Vision을 대안으로 기술 검증할 수 있으나 한국어 정확도/SDK 지원 정책을 직접 비교한다.
+2. **Web/PWA:** 이미지 파일 전송을 사용자가 동의하면 서버 OCR 공급자로 처리. 웹 자체 OCR은 크기/정확도/속도/초기 모델 다운로드 비용을 검증한 뒤 도입.
+3. **백엔드:** OCR 텍스트 + 좌표를 표준 JSON으로 수신하여 가맹점·일시·결제 금액 후보를 추출하는 공통 파서. 클라이언트가 마음대로 전송한 금액을 최종 거래로 믿지 않는다.
+4. **분리:** `TextRecognizer`는 글자를 읽는다. 금액·가맹점·결제수단을 **의미적으로 구조화하는 파서**는 별도 기능이다. OCR 성공이 가계부 자동입력 성공을 의미하지 않는다.
+5. **언어:** `ko`·`en` 우선, 일본어 영수증 등은 사용자별 언어 설정에 따라 추가 모델 선택. 모델 다운로드 상태/기기 사양에 따라 로컬 OCR 사용 가능 여부가 달라질 수 있다.
+6. **비용:** 가능한 한 무료 온디바이스 SDK를 쓰고 사용자 선택으로만 원본 이미지를 서버에 보낸다. 외부 LLM/OCR 공급자는 별도 사용 요금·이용약관 확인.
+
+**참고:** ML Kit Text Recognition v2는 한국어/일본어/라틴 문자 인식을 공식 지원한다. 실제 최소 OS/SDK/모델 의존성 버전은 릴리스 시점 호환성 매트릭스를 다시 확인한다.
+
+### 28.4 이미지 보정·입력 정책
+
+- 허용 형식: `JPEG`, `PNG`, `WebP`를 1차 대상으로 하고, `HEIC/HEIF`는 플랫폼에서 지원되는 경우 디코딩한 뒤 표준 형식 변환. PDF는 후속 처리 경로.
+- 파일 크기 제한(예: 최대 15MB)은 **제품 설정값**이며 필요에 따라 조정; 초과 시 압축/재촬영 유도.
+- EXIF 방향 보정, 좌우 회전, 가장자리 자르기, 그레이스케일/대비 증가, 원본과 보정본 비교는 품질 테스트로 선택.
+- 해상도 축소가 작은 품목 글자를 지우지 않도록 글자 높이·픽셀 조건을 테스트. 금액 일부가 잘릴 때 자동 확정 금지.
+- 얼굴, 전화번호, 주소, 카드 일부 번호 등 영수증에 불필요한 개인식별정보가 들어갈 수 있음을 전제로 보호.
+- 앱은 JPEG 안의 임의 EXIF 메타데이터를 필요 이상 저장하지 않는다.
+- 업로드를 허용한다면 확장자뿐 아니라 파일 시그니처 검사/디코딩/용량·픽셀수 제한, 악성 이미지 방어, 이미지 저장소의 접근 제어가 필요하다.
+
+### 28.5 추출 결과 공통 계약
+
+```ts
+export type ReceiptParseStatus =
+  | 'CREATED' | 'OCR_PROCESSING' | 'REVIEW_REQUIRED'
+  | 'READY_TO_CONFIRM' | 'CONFIRMED' | 'DUPLICATE_LINKED'
+  | 'CANCELLED' | 'FAILED';
+
+export interface ReceiptDraft {
+  receiptId: string;
+  status: ReceiptParseStatus;
+  merchantName?: string;
+  purchasedAt?: string;        // ISO 8601, 시간대 명시
+  currency?: string;           // KRW, JPY, USD 등
+  totalAmount?: string;        // BigDecimal 문자열
+  taxAmount?: string;
+  discountAmount?: string;
+  paymentMethodHint?: 'CASH' | 'CREDIT_CARD' | 'DEBIT_CARD' | 'UNKNOWN';
+  last4Hint?: string;          // 있으면 마스킹, 전체 PAN 저장 금지
+  categoryIdSuggestion?: string;
+  items: Array<{
+    label: string;
+    quantity?: string;
+    unitPrice?: string;
+    lineTotal?: string;
+  }>;
+  warnings: string[];
+  reviewRequiredFields: string[];
+  duplicateCandidates: Array<{
+    transactionId: string;
+    reasonCodes: string[];
+  }>;
+  originalImageRetention: 'NONE' | 'TEMPORARY' | 'USER_SAVED';
+  version: number;
+}
+```
+
+- `totalAmount`는 '공급가액', '부가세', '거스름돈', '받은 금액', '승인금액', '할인 후 금액' 등을 구분해 추출한 최종 실제 결제액이다.
+- OCR 엔진 자체 신뢰도와 파서 필드 신뢰도는 별개. 불명확하면 `null`과 `warnings`를 반환한다.
+- 고객의 결제수단과 은행 계좌는 영수증 인식으로 확정되지 않는다. 과거 선택을 추천할 수 있어도 사용자 확인 필요.
+- OCR 결과 오류가 있어도 원본 이미지는 사용자가 보며 필드를 수정할 수 있다.
+
+### 28.6 파서: 금액·날짜·상호 추론 규칙
+
+1. OCR의 읽기 순서/좌표를 복원한다. 숫자 `5,000`, `5000`, `￦5,000`처럼 정규화하되 원문도 보존.
+2. 영수증 하단의 `합계`, `결제금액`, `승인금액`, `받을금액`, `TOTAL` 등 **주변 키워드와 위치**를 함께 사용해 금액 후보를 찾는다.
+3. `합계금액`과 `결제금액`이 다르면 할인/포인트/봉사료/세금을 분석해 마지막 실제 청구액을 사용하며, 모순되면 검토 필요로 표시한다.
+4. 결제 시간은 `YYYY-MM-DD`, `YYYY.MM.DD`, `YY/MM/DD`, `오후 3:10` 등의 형식을 지원하되, 임의의 연도를 보정하지 않는다. 영수증 현지 시간대/국가를 알 수 없으면 시간대 확인을 요구.
+5. 상호는 상단의 큰 글씨, `상호`, `가맹점`, 사업자등록번호 주변 키워드 등을 참고한다. 사업자번호는 유효성 검사만 수행하고 마스킹/비보존을 기본으로 한다.
+6. 품목명과 합계는 표 형태 좌표로 묶고, 할인/취소/환불 행은 음수인지 별도 식별한다.
+7. 품목 합계와 총결제액이 불일치하면 `ITEM_SUM_MISMATCH` 등 경고. 영수증 할인/세금/반올림 때문에 정상 불일치 가능하므로 무조건 오류로 판단하지 않는다.
+8. 통화 기호 `¥`는 JPY/CNY 등 다의성이 있으므로 가맹점 국가/문맥을 활용하되 모르면 확인 요구.
+9. 결제 수단이 명시돼 있지 않거나 단순 카드 번호 일부만 있는 경우 서버의 실제 계좌 ID를 임의로 선택하지 않는다.
+10. 증빙서류가 영수증이 아니라 환불확인서/주문내역/입금확인서/견적서인 경우 **실제 결제 발생 여부를 질문**한다.
+
+### 28.7 가계부 카테고리 자동추천
+
+- 1순위: 사용자 확정 규칙 `(정규화 가맹점 → categoryId)`.
+- 2순위: 사용자의 이전 수정 이력(같은 매장/유사 품목).
+- 3순위: `merchant_keyword_rule` 등 규칙 기반 기본 추천(카페/식비/교통/쇼핑 등).
+- 4순위: 사용자 명시 동의 시 AI 추천(출력은 추천일 뿐 자동 확정 아님).
+- 같은 가맹점에서 식품·잡화를 함께 산 경우 M1은 대표 카테고리 1개를 추천하되 M2에서는 **품목별 지출 분할**로 확장한다.
+- 사용자가 `스타벅스 → 식비`로 수정하면 본인 계정에서만 선택적으로 학습 규칙을 저장한다.
+
+### 28.8 중복 방지·거래 연결
+
+**중복은 2종류다.** (A) **동일 영수증 파일 재등록**, (B) **이미 수동 입력하거나 카드/계좌 내역에서 들어온 거래와 중복**.
+
+- A: 사용자 범위에서 이미지 정규화 해시(예: SHA-256)와 OCR 정규화 텍스트 지문을 활용. 사진 각도/크롭 차이로 해시가 달라질 수 있으므로 해시 1개로만 판정하지 않는다.
+- B: 사용자·통화·확정 금액·허용 시간 오차·가맹점 유사도·결제수단 힌트를 조합해 중복 **후보**만 반환.
+- 정확히 일치하는 금액과 시간에도 **같은 매장에서 연속 결제 2건**이 가능하므로 후보를 자동으로 병합하지 않는다.
+- 검토 UI 선택: `이미 등록한 거래에 영수증만 연결` / `별개 지출로 등록` / `취소`.
+- 서버 확정 명령에는 `Idempotency-Key`, import ID, 버전으로 동시 처리/재요청 방지. 동일 import가 이미 확정된 경우 기존 transaction ID를 반환한다.
+- 보유 계좌·카드 내역을 외부에서 가져오는 시점에는 receipt link를 사용해 수입/지출 중복을 조정한다. 원장 posting을 재중복 생성하지 않는다.
+
+### 28.9 데이터베이스 설계
+
+| 테이블 | 주요 컬럼 | 제약/역할 |
+|---|---|---|
+| `receipt_import` | id, user_id, status, origin, ocr_engine, ocr_lang, content_fingerprint, source_hash, occurred_at_candidate, total_candidate, currency_candidate, merchant_candidate, draft_json, retention_mode, created_at, updated_at, version | 인식 작업 및 미확정 초안. FK로 거래 참조 가능 |
+| `receipt_ocr_line` (선택) | id, receipt_id, ordinal, text_redacted, bounding_box_json | 원본 OCR 결과. 개인정보 보존 최소화 |
+| `receipt_item` | id, receipt_id, line_index, name, quantity, unit_price, line_total, corrected | 품목 인식/수정 결과. 합계 참고용 |
+| `receipt_transaction_link` | id, receipt_id, money_transaction_id, link_type, created_at | 영수증 ↔ 확정 거래, 중복 연결 포함 |
+| `receipt_processing_job` (서버 OCR 시) | id, receipt_id, status, attempt, last_error_code, next_retry_at | 서버 OCR 재시도/실패 격리 |
+| `receipt_image_object` (선택) | id, receipt_id, object_key, encrypted, expires_at, consent_at | 이미지 보관 동의가 있을 때만 |
+| `merchant_category_preference` | user_id, normalized_merchant, category_id, priority, updated_at | 사용자별 카테고리 추천 규칙 |
+
+**핵심 불변식**
+
+- 검토 중 `receipt_import.status=REVIEW_REQUIRED`인 데이터는 금융 원장 잔액에 영향을 주지 않는다.
+- `receipt_transaction_link`는 `receipt_import`와 `money_transaction` **두 쪽 모두 같은 user_id**인지 서비스/DB 설계에서 보증한다.
+- `status=CONFIRMED` 완료와 금융 거래·posting 생성은 하나의 DB 트랜잭션으로 처리(이미지 작업 자체는 트랜잭션 밖).
+- 동일 receipt에서 반복 confirm으로 거래가 중복 생성되지 않도록 사용자 범위에서 확정 상태 전이 + 멱등 키 보장.
+- 저장형 이미지 객체키는 권한 검사를 거치는 URL로만 접근. 공개 URL/퍼블릭 버킷 금지.
+- 스키마에서는 같은 영수증에 여러 거래를 연결할 가능성을 고려하되 첫 버전 **정상 지출 1건 연결**로 제한.
+
+### 28.10 PostgreSQL 초기 마이그레이션 예시
+
+> 이 DDL은 **기존 16장 스키마와 합치기 위한 확장 초안**이다. 사용자 PK·거래 PK 타입이 UUID임을 확인하고 Flyway 마이그레이션 번호를 충돌 없이 배정한다.
+
+```sql
+CREATE TABLE receipt_import (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES app_user(id),
+  status VARCHAR(32) NOT NULL,
+  origin VARCHAR(24) NOT NULL,
+  ocr_engine VARCHAR(40),
+  source_hash CHAR(64),
+  content_fingerprint CHAR(64),
+  merchant_candidate VARCHAR(255),
+  occurred_at_candidate TIMESTAMPTZ,
+  total_candidate NUMERIC(20, 6),
+  currency_candidate CHAR(3),
+  draft_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  retention_mode VARCHAR(20) NOT NULL DEFAULT 'NONE',
+  version BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT receipt_import_status_ck CHECK (
+    status IN ('CREATED','OCR_PROCESSING','REVIEW_REQUIRED',
+               'READY_TO_CONFIRM','CONFIRMED','DUPLICATE_LINKED',
+               'CANCELLED','FAILED')
+  ),
+  CONSTRAINT receipt_import_amount_ck CHECK (
+    total_candidate IS NULL OR total_candidate >= 0
+  )
+);
+
+CREATE INDEX idx_receipt_import_user_created
+  ON receipt_import(user_id, created_at DESC);
+CREATE INDEX idx_receipt_import_user_fingerprint
+  ON receipt_import(user_id, content_fingerprint);
+
+CREATE TABLE receipt_transaction_link (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES app_user(id),
+  receipt_id UUID NOT NULL REFERENCES receipt_import(id),
+  money_transaction_id UUID NOT NULL REFERENCES money_transaction(id),
+  link_type VARCHAR(20) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT receipt_link_unique UNIQUE (receipt_id, money_transaction_id),
+  CONSTRAINT receipt_link_type_ck CHECK (link_type IN ('CREATED','MATCHED','ATTACHMENT'))
+);
+CREATE INDEX idx_receipt_link_user_transaction
+  ON receipt_transaction_link(user_id, money_transaction_id);
+```
+
+**추가 구현 필요:** 위 예시는 FK만으로 다중 테이블의 `user_id` 일치를 강제하지 않는다. 실제 구현에서는 복합 유니크/복합 FK 또는 신뢰할 수 있는 서비스 트랜잭션 검증 및 경합 테스트로 소유권 일치를 보장해야 한다. 상태 전이 및 확정 유일성도 애플리케이션 트랜잭션/제약 조건 설계에 맞춰 보완한다.
+
+### 28.11 REST API 상세
+
+| Method | Endpoint | 목적 | 결과 |
+|---|---|---|---|
+| `POST` | `/api/v1/receipts/imports` | OCR 줄/이미지 처리 결과로 초안 생성 | `201` + import ID |
+| `POST` | `/api/v1/receipts/imports/upload` | 서버 OCR 동의 사용자용 파일 업로드 | `202` + job ID |
+| `GET` | `/api/v1/receipts/imports/{id}` | 초안/상태/필드/경고/중복 후보 조회 | `200` |
+| `PATCH` | `/api/v1/receipts/imports/{id}` | 가맹점/금액/일시/품목 등 교정 | `200` + 새 version |
+| `GET` | `/api/v1/receipts/imports/{id}/duplicates` | 중복 거래 후보 조회 | `200` + 후보 목록 |
+| `POST` | `/api/v1/receipts/imports/{id}/confirm` | 검증 후 신규 금융 거래 확정 | `201` 또는 멱등 재요청 시 기존 ID |
+| `POST` | `/api/v1/receipts/imports/{id}/link` | 기존 금융 거래에 영수증 연결 | `200` |
+| `POST` | `/api/v1/receipts/imports/{id}/cancel` | 초안 폐기/삭제 정책 반영 | `200` |
+| `DELETE` | `/api/v1/receipts/imports/{id}/image` | 원본 이미지 보관 해제/삭제 | `204` |
+
+**인증:** 사용자 ID는 body로 받지 않고 서버 인증 주체로 결정. `confirm`은 사용자 소유 계좌/카테고리를 참조하는지 검사. 모든 mutate API는 CSRF/세션 또는 적합한 토큰 정책 적용.
+
+**온디바이스 OCR 결과 전송 예시:**
+
+```http
+POST /api/v1/receipts/imports
+Content-Type: application/json
+Idempotency-Key: 6aac... (UUID 예시)
+```
+
+```json
+{
+  "origin": "CAMERA",
+  "ocrEngine": "ML_KIT_V2_ON_DEVICE",
+  "recognizedLines": [
+    { "text": "스타벅스 OO점" },
+    { "text": "2026.11.02 12:30" },
+    { "text": "승인금액 9,500" }
+  ],
+  "sourceFingerprint": "sha256-normalized-content-hash",
+  "imageUploadConsent": false
+}
+```
+
+**검토 후 확정 요청 예시:**
+
+```http
+POST /api/v1/receipts/imports/{id}/confirm
+Idempotency-Key: <uuid-per-confirm-intent>
+If-Match: "7"
+Content-Type: application/json
+```
+
+```json
+{
+  "moneyAccountId": "00000000-0000-4000-8000-000000000001",
+  "categoryId": "00000000-0000-4000-8000-000000000002",
+  "merchantName": "스타벅스 OO점",
+  "occurredAt": "2026-11-02T12:30:00+09:00",
+  "currency": "KRW",
+  "amount": "9500",
+  "type": "EXPENSE",
+  "duplicateDecision": "CREATE_NEW",
+  "memo": "영수증 OCR 등록"
+}
+```
+
+- 예제 UUID/가맹점/시간은 **가상 테스트 데이터**다.
+- 요청의 `duplicateDecision`이 기존 일치 후보를 무시하는 `CREATE_NEW`라면 명시적 최종 확인을 요구한다.
+- 같은 import의 중복 confirm 시 **기존 거래를 응답**하고 원장 posting을 새로 추가하지 않는다.
+- 409: 초안 버전 충돌/이미 확정된 상태에서 서로 다른 요청. 422: 결제액·통화·계좌·타입 누락. 413: 크기 초과. 415: 미지원 파일. 429: OCR 호출 제한.
+- 비동기 OCR이면 `GET` 또는 SSE/폴링으로 상태를 추적하되 202 응답을 최종 확정으로 오인하지 않는다.
+
+### 28.12 백엔드 유스케이스·트랜잭션 의사코드
+
+```java
+@Transactional
+public ConfirmReceiptResponse confirm(UUID receiptId, ConfirmReceiptCommand command,
+                                      AuthenticatedUser currentUser, String idempotencyKey,
+                                      long expectedVersion) {
+    ReceiptImport receipt = receiptRepository.lockOwnedBy(receiptId, currentUser.id());
+    validateVersion(receipt, expectedVersion);
+
+    if (receipt.isConfirmed()) {
+        return transactionLinkRepository.getExistingResponse(receiptId);
+    }
+    validateReviewAndAccountOwnership(receipt, command, currentUser);
+    validateAmountCurrencyAndDuplicateDecision(command);
+
+    MoneyTransaction tx = moneyCommandService.postExpense(
+        command.toExpenseRequest(), currentUser, idempotencyKey);
+    receiptTransactionLinkRepository.link(currentUser.id(), receipt.id(), tx.id(), "CREATED");
+    receipt.markConfirmed();
+    outbox.append(new ReceiptConfirmedEvent(receipt.id(), tx.id()));
+    return new ConfirmReceiptResponse(receipt.id(), tx.id(), "POSTED");
+}
+```
+
+**구현 주의:** 의사코드로, 실제 `MoneyCommandService`가 동일 DB 트랜잭션에 참여하는지 검증해야 한다. `lockOwnedBy`는 사용자 범위 소유권 + 비관적 잠금 또는 동등한 상태 전이 원자성을 제공해야 한다. 멱등 키 재사용 시 요청 본문 hash가 달라지면 충돌 처리해야 한다.
+
+### 28.13 개인정보·보존 기간
+
+- 기본 정책: 모바일에서는 이미지를 서버에 업로드하지 않고 **OCR 인식 텍스트 중 필요한 필드만 전송**한다.
+- 이미지 원본: 기본 `NONE` (서버 미보관). 사용자가 영수증 증빙 저장을 선택하면 암호화된 비공개 저장소에 보관하고 언제든 삭제 가능.
+- 서버 OCR을 선택한 경우에만 이미지 송신·일시 저장에 동의. 처리 완료 후 기본 삭제를 목표로 하고 잔존 기간/장애 데이터 삭제 정책을 문서화.
+- 일부 카드번호·전화번호·주소·사업자번호·승인번호는 필요성이 없으면 저장하지 않고 마스킹한다.
+- 접근 로그/애플리케이션 로그/오류 추적 도구에 OCR 전문·이미지·금융 민감정보를 남기지 않는다.
+- 데이터 내보내기/계정 삭제 요청 시 영수증 데이터와 이미지 연결도 포함한다.
+- 사용자가 외부 AI 인식/분석을 켜기 전에는 해당 공급자에 영수증 내용을 전송하지 않는다.
+
+### 28.14 비용 및 성능 정책
+
+- M1: 가능하면 온디바이스 OCR 무료 경로. 서버는 파서·검토·원장 확정만 담당해 호출 비용 최소화.
+- 로컬 텍스트 모델을 포함하면 앱 번들 크기와 초기 설치 용량이 커질 수 있으므로 실제 앱 크기 측정.
+- 이미지 자체를 DB `BYTEA` 컬럼에 대량 저장하지 않는다. 필요 시 별도 오브젝트 스토리지와 짧은 보존기간을 사용.
+- OCR 리소스를 부주의하게 반복 실행하지 않도록 동일 파일/작업 ID 캐시. 시스템 권한 거부 시 빠른 실패·재시도 가능 UX.
+- 인식 성능 KPI: OCR 처리 시간(기기별 P50/P95), 총액 정확도(확정 값 기준), 사용자의 수정률, 중복 후보 적중률, 잘못 확정된 거래 0건을 중심으로 측정.
+- 인식률은 시험 데이터 없이 숫자로 보장하지 않는다. 실제 여러 가맹점 샘플에 대해 측정 후 목표 확정.
+
+### 28.15 테스트 시나리오 최소 22개
+
+| # | 테스트 | 기대 결과 |
+|---|---|---|
+| 01 | 한글 카페 영수증 | 가맹점·금액 후보 표시 |
+| 02 | 편의점 여러 품목 | 총결제액/품목 구분 |
+| 03 | 할인/쿠폰 적용 영수증 | 할인 전 합계 대신 실제 최종 결제액 후보 |
+| 04 | 부가세·봉사료 별도 | 총액이 세금 포함인지 파서 검토 |
+| 05 | 카드 결제·승인번호 포함 | 전체 카드번호 저장 금지 |
+| 06 | 현금 영수증 | 현금/현금영수증 구분, 계좌 선택 |
+| 07 | 거스름돈 표시 | 건넨 금액을 지출로 저장하지 않음 |
+| 08 | 취소/환불 영수증 | EXPENSE 무조건 생성 금지 |
+| 09 | 주문서/견적서 | 실제 결제로 단정하지 않음 |
+| 10 | 흐림/반사/구겨짐 | 미인식·경고/재촬영 흐름 |
+| 11 | 화면 캡처(전자영수증) | 파일 선택·OCR 성공 |
+| 12 | 영수증 두 장 동시 업로드 | 각각 별도 초안, 섞이지 않음 |
+| 13 | 한국어+영어 혼합 | 언어 혼합 인식 시도 |
+| 14 | 해외 통화/외국 날짜 | 통화·시간대 모호성 확인 |
+| 15 | 동일 파일 재업로드 | 기존 import 후보 탐지 |
+| 16 | 같은 가게 동일 금액 연속 결제 | 일치 후보로만 표시, 자동 병합 X |
+| 17 | 다른 기기 동시 confirm | 확정 원장 중복 0건 |
+| 18 | 업로드 중 네트워크 종료 | 재시도 가능, 원장 미변경 |
+| 19 | OCR 처리 후 사용자가 앱 종료 | 미확정 초안 복구/정리 정책 따름 |
+| 20 | 카메라/사진 권한 거부 | 대체 파일 선택/안내 제공 |
+| 21 | 다른 계정 receiptId 조회 | 403/404 등 권한 차단 |
+| 22 | 영수증 삭제/계정 탈퇴 | 이미지·인식 초안 관련 삭제/보존 정책 준수 |
+| 23 | 사용자 총액 수정 | 수정 값만 POSTED 거래로 확정 |
+| 24 | 기존 거래 연결 선택 | 새 posting 없이 영수증 링크만 생성 |
+| 25 | OCR 전문에 제어문자/스크립트 포함 | 안전한 텍스트 처리 및 XSS 방어 |
+| 26 | 같은 멱등키로 다른 거래 요청 | 충돌 반환, 기존 원장 유지 |
+
+### 28.16 작업 단위 및 실행 순서
+
+1. `OCR-001A` — 웹 파일 업로드·이미지 미리보기/회전 UI.
+2. `OCR-001B` — Capacitor iOS/Android 카메라/갤러리 및 권한 대응.
+3. `OCR-002A` — ML Kit 한국어/라틴어 실제 기기 인식 실험(안드로이드·아이폰 각 10장 이상의 다양한 영수증 샘플로 시작).
+4. `OCR-002B` — `ReceiptOcrPort` 표준 스키마·Mock OCR 엔진.
+5. `OCR-002C` — 서버 파서: 거래일시·가맹점·총결제액 후보·검토 필요 조건.
+6. `OCR-002D` — `receipt_import` Flyway 스키마·초안 CRUD·인식 결과 버전 관리.
+7. `OCR-003A` — 중복 후보 탐지 API/검토 화면.
+8. `OCR-003B` — 계좌 선택/카테고리 교정/확정 API와 `money_transaction`/`money_posting` 연결.
+9. `OCR-003C` — 멱등/동시성/실패/권한/정합성 자동 테스트.
+10. `OCR-003D` — iOS/Android/웹 3개 플랫폼 실제 결제 시나리오 리그레션.
+11. `OCR-004A` — 품목별 카테고리 분할, 카드/계좌 CSV 연결 및 ML 규칙 고도화(후속).
+
+### 28.17 영수증 기능 수용 기준 (Definition of Done)
+
+- [ ] iOS 앱에서 종이 영수증을 촬영하고 가맹점·일시·최종 결제금액 초안을 검토할 수 있다.
+- [ ] Android 앱에서도 동일 시나리오가 동작한다.
+- [ ] PC 웹에서 스크린샷/이미지 파일 선택 후 같은 검토 화면을 사용할 수 있다.
+- [ ] 한국어 OCR 가능 여부를 실제 기기에서 검증하고 인식 실패 시 수동 입력할 수 있다.
+- [ ] 사용자 확인 전에는 금융 원장에 `POSTED` posting이 한 건도 생성되지 않는다.
+- [ ] 확정 시 정확히 한 번만 비용/결제계좌 posting을 기록하고 이번 달 예산에 반영한다.
+- [ ] 중복 의심 시 기존 거래 연결 또는 신규 거래 생성 중 사용자가 명시적으로 선택한다.
+- [ ] 민감한 원본 이미지는 기본적으로 서버에 업로드하지 않는다.
+- [ ] OCR/LLM 비용이 발생하는 경로는 동의·쿼터·예상 처리 방식 안내 후 활성화한다.
+
+### 28.18 공식 기술 참조 (구현 전 재확인)
+
+- Capacitor: https://capacitorjs.com/docs
+- Capacitor 카메라 플러그인: https://capacitorjs.com/docs/apis/camera
+- Capacitor iOS 개발: https://capacitorjs.com/docs/ios
+- Capacitor 환경 설정: https://capacitorjs.com/docs/getting-started/environment-setup
+- Capacitor 알림: https://capacitorjs.com/docs/apis/push-notifications
+- Google ML Kit Text Recognition v2: https://developers.google.com/ml-kit/vision/text-recognition/v2
+- Google ML Kit Android: https://developers.google.com/ml-kit/vision/text-recognition/v2/android
+- Google ML Kit iOS: https://developers.google.com/ml-kit/vision/text-recognition/v2/ios
+- ML Kit 언어 지원 목록: https://developers.google.com/ml-kit/vision/text-recognition/v2/languages
+- Apple Vision: https://developer.apple.com/documentation/vision/vnrecognizetextrequest
+
+---
+
+## 29. 최초 실행·로그인·회원가입·계정 복구 상세 명세
+
+> **추가 요구사항 AUTH-ADR-001 (2026-11-02):** MY TODAY는 로그인 전에는 사적인 일정·지출·보유주식·성장 데이터를 절대 표시하지 않는다. 첫 방문 시 `환영 → 로그인 또는 회원가입`, 인증 완료 후 `온보딩(최초 1회) → 오늘 홈`으로 이동한다. **1차는 무료 PWA**로 iPhone Safari / Android Chrome / PC 브라우저에서 동일 계정으로 사용한다. 정식 앱스토어 배포는 후순위다.
+
+### 29.1 첫 실행과 재방문 규칙
+
+| 조건 | 열리는 화면 | 후속 처리 |
+|---|---|---|
+| 첫 방문, 유효 세션 없음 | `/welcome` | `로그인` 또는 `회원가입` 중 선택 |
+| `로그인` 선택 | `/login` | 이메일·비밀번호 인증, 성공 시 세션 생성 |
+| `회원가입` 선택 | `/signup` | 중복 이메일/유효성 확인, 정책에 따라 이메일 검증 |
+| 로그인 성공, 온보딩 미완료 | `/onboarding` | 표시 이름·시간대·통화·목표 선택(건너뛰기 가능) |
+| 로그인 성공, 온보딩 완료 | `/today` | 일정·할 일·지출·관심주식 통합 홈 |
+| 기존 사용자 재방문, 세션 유효 | `/today` 또는 마지막 허용 화면 | 개인 데이터 재조회 |
+| 유효 세션 없이 `/money` 직접 접속 | `/login?next=%2Fmoney` | 로그인 후 안전한 내부 경로로 복귀 |
+| 로그아웃 선택 | `/welcome` | 서버 세션 폐기, 개인 화면/캐시 비움 |
+| 로그인 세션 만료 | `/login` | 개인 API는 401, 미저장 작업 안내 후 재인증 |
+| 네트워크 불가 | 오프라인 안내 | 로그인 성공/실패를 추측하지 않고 금융 원장 입력 차단 |
+
+**원칙:** 단순히 브라우저에 `loggedIn=true`를 저장하지 않는다. **서버의 세션 검증이 로그인 여부의 유일한 기준**이다. 로그인 전 노출 가능한 콘텐츠는 서비스 설명, 개인정보/이용 안내, 인증 화면뿐이다.
+
+```mermaid
+flowchart TD
+  A[앱 열기 / PWA 실행] --> B{서버 세션 유효?}
+  B -->|아니오| C[환영 화면 /welcome]
+  C --> D{선택}
+  D -->|로그인| E[/login]
+  D -->|회원가입| F[/signup]
+  F --> G[계정 생성 및 가입 정책 검증]
+  G --> E
+  E --> H{인증 성공?}
+  H -->|아니오| E
+  H -->|예| I{최초 설정 완료?}
+  B -->|예| I
+  I -->|아니오| J[/onboarding]
+  J --> K[/today]
+  I -->|예| K
+  K --> L[일정/할 일/가계부/주식/성장]
+  L --> M{로그아웃?}
+  M -->|예| N[서버 세션 폐기 + 캐시 정리]
+  N --> C
+```
+
+### 29.2 UI/UX 요구사항 — PC·아이폰·안드로이드 공통
+
+**① 환영 화면 `/welcome`**
+
+```text
+┌───────────────────────────────────────┐
+│               MY TODAY                │
+│      나의 하루, 돈, 목표를 한곳에       │
+│                                       │
+│     오늘 일정 / 가계부 / 주식 / 할 일   │
+│                                       │
+│           [ 로그인 ]                  │
+│         [ 회원가입 ]                  │
+│                                       │
+│   개인정보 안내   ·   이용 안내        │
+└───────────────────────────────────────┘
+```
+
+- 로그인 전에는 내 돈/일정에 대한 예시 데이터를 실제 내 데이터처럼 보여주지 않는다.
+- 모바일(최소 320 CSS px 기준, 기기 확대 접근성 고려)에서 세로 스크롤 없이 주요 버튼 접근을 우선하지만 작은 화면에서 스크롤을 금지하지 않는다.
+- 로고/문구는 자산과 무관한 정적 콘텐츠이며 HTTPS로 제공한다.
+
+**② 로그인 `/login`**
+
+```text
+┌───────────────────────────────────────┐
+│  ← 돌아가기            MY TODAY       │
+│                                       │
+│             다시 만나서 반가워요      │
+│                                       │
+│  이메일                               │
+│  [ email@example.com              ]   │
+│                                       │
+│  비밀번호                    [보기]   │
+│  [ •••••••••••••••••••••           ]   │
+│                                       │
+│  [ 로그인                           ] │
+│                                       │
+│  비밀번호를 잊으셨나요?                │
+│  계정이 없나요? 회원가입               │
+└───────────────────────────────────────┘
+```
+
+- 입력 필드: 이메일(`autocomplete=username`, 모바일 이메일 키보드), 비밀번호(`autocomplete=current-password`).
+- 로그인 버튼 중복 제출 방지, 진행 중 상태, 엔터/키보드 제출, 오류 시 포커스 이동, `aria-live` 오류 영역.
+- 비밀번호 보기 기능은 화면에서만 토글, 자동 저장 여부는 OS/브라우저 비밀번호 관리자에 위임.
+- 실패 시 일반화 문구 `이메일 또는 비밀번호를 확인해 주세요.` 사용(계정 존재 여부 노출 방지).
+- 잠금/속도 제한 시 `시도 횟수가 많습니다. 잠시 후 다시 시도해 주세요.` 등 안전한 안내.
+- `로그인 유지` 옵션은 후속에서 도입 가능. M0는 브라우저/기기별 세션 만료 정책을 명시하고 자동 로그인 강제 제공 금지.
+- 회원가입 버튼은 `/signup`, 비밀번호 분실은 `/forgot-password`로 연결. 단, 메일 재설정 기능 미배포 시 실제 버튼으로 무작동 화면에 보내지 말고 `복구 기능 준비 중`처럼 명시 또는 운영자 지원 방식 안내.
+
+**③ 회원가입 `/signup`**
+
+- 필수: 이메일, 비밀번호, 비밀번호 확인. 선택: 표시 이름.
+- 암호 정책: 최소 **12자 권장**, 과도한 특수문자 조합 강제보다 긴 암호/패스프레이즈 허용(허용 최대 길이와 유니코드 처리 명시). 비밀번호 확인은 서버에서 해시 비교 전 일치 검증.
+- 이메일 중복, 잘못된 형식, 약한 비밀번호, 429 호출 제한 등을 각 필드에 이해하기 쉬운 오류로 표시한다.
+- 기본 설정: 시간대 `Asia/Seoul`, 통화 `KRW`, 언어 `ko-KR`(온보딩 수정 가능).
+- 약관·개인정보 안내 링크를 제공하며 동의/고지는 실제 서비스 범위·법적 요건에 따라 분리한다.
+- **개인용 개발 베타:** 비용 0원 운영을 위해 초기 사용자 1명은 관리 명령/초대 기반으로 만들 수 있다. 이 경우 공개 회원가입은 비활성화하여 임의 접근을 막는다.
+- **공개 회원가입:** 이메일 주소 소유 확인과 메일 발송/계정 복구가 준비된 뒤 오픈한다. `회원가입 화면 존재`와 `누구나 가입 가능`은 별도 설정(`registration.mode=INVITE_ONLY|PUBLIC`)이다.
+
+**④ 최초 설정 `/onboarding`**
+
+- 단계 A: 표시 이름·시간대·통화/국가 기준, 필요한 경우 한 번만.
+- 단계 B: 주요 목표(일정/할 일/가계부/주식/성장) 우선 카드 선택. 선택을 강제하지 않는다.
+- 단계 C: `시작하기` → `/today`. `나중에 설정` 선택 시 선택항목을 기본값으로 저장한다.
+- 튜토리얼 데이터는 실제 가계부에 자동 등록하지 않는다. 데모 카드는 `예시`라는 표시를 한다.
+- 온보딩 `completed_at`은 서버에 저장한다. 다른 기기 로그인 시 완료 상태가 공유된다.
+
+**⑤ 설정 / 계정 관리 `/settings/security`**
+
+- 표시 이름 수정, 비밀번호 변경(현재 비밀번호 재확인), 로그아웃.
+- M1: 현재 로그인된 기기/최근 로그인 목록, 다른 기기에서 로그아웃, 비밀번호 재설정, Google 계정 연결/해제.
+- M2: Passkey(WebAuthn) / 가능한 경우 플랫폼 생체인증 UX. **PWA에서 Face ID를 직접 인증 서버의 비밀번호 대체 수단이라고 단정하지 않는다.**
+
+### 29.3 Router Guard 및 세션 초기화
+
+| 라우트 종류 | 경로 | 정책 |
+|---|---|---|
+| 공개 | `/welcome`, `/login`, `/signup`, `/forgot-password`, `/reset-password` | 로그인 없이 열림(복구 페이지는 token 검증 필요) |
+| 보호 | `/today`, `/calendar`, `/tasks`, `/growth`, `/money`, `/invest`, `/settings` | 서버 세션 유효해야 열림 |
+| 온보딩 | `/onboarding` | 로그인은 필요, 이미 완료라면 `/today`로 이동 |
+| 인증 API | `/api/v1/auth/**` | 엔드포인트별 공개/인증·CSRF 정책 구별 |
+| 사생활 보호 | `/api/v1/money/**`, `/api/v1/invest/**` 등 | API 레벨에서 인증+객체 소유권 검사 필수 |
+
+- 앱 로딩 시 `GET /api/v1/auth/session` 호출. `200`(로그인), `401`(미로그인), `5xx/네트워크 실패`(판정불가)를 구별한다.
+- 네트워크 오류를 로그인 실패로 간주하거나 자동 로그아웃 처리하지 않는다. 재시도 UI를 제공하되 민감정보를 화면에 노출하지 않는다.
+- `next`/`redirect` 목적지는 **같은 도메인 내 내부 상대 경로만 허용**; 외부 URL 및 `//host` 차단(오픈 리다이렉트 방지).
+- 라우터 가드는 UX일 뿐이다. 백엔드의 Spring Security와 사용자별 소유권 검증이 최종 보안 계층이다.
+- 로그인 후 이전 사용자의 Vue Query/Pinia 메모리 상태·Service Worker 캐시가 재사용되지 않도록 사용자 전환/로그아웃 시 삭제한다.
+- PWA 서비스 워커는 로그인/가계부/투자 등 **개인 API 응답을 캐시하지 않고**, HTML/정적 자산 중심으로 캐시한다. 개인정보 화면은 필요 시 `Cache-Control: no-store`를 적용한다.
+
+### 29.4 인증 방식 및 세션 보안 — Spring Boot
+
+**M0 권장: Spring Security + 서버 세션 쿠키(Spring Session JDBC 선택)**
+
+1. 웹 프런트와 API를 `https://my-today.example` 같은 **동일 출처**로 서비스한다. `/api/v1`은 reverse proxy로 Spring Boot에 전달한다. 도메인 예시는 실제 배포 주소가 아니다.
+2. 서버가 서명/인증된 사용자 세션을 관리한다. 인증 성공 시 세션 ID를 회전(session fixation 방어).
+3. 브라우저에는 `HttpOnly; Secure; SameSite=Lax` 또는 애플리케이션의 사용 패턴에 적합한 강화 정책의 **세션 쿠키만** 저장한다. 인증 토큰을 `localStorage`에 장기 보관하지 않는다.
+4. 모든 POST/PATCH/PUT/DELETE는 로그인 전 인증 엔드포인트를 포함해 CSRF 보호를 적용한다. 초기화 토큰을 `GET /auth/csrf` 등으로 받아 `X-CSRF-TOKEN` 헤더에 포함한다. 구현한 CSRF 저장소/쿠키 방식과 실제 헤더명이 일치해야 한다.
+5. 서버는 `request.getSession()`만으로 유저를 신뢰하지 않고 Spring Security `Authentication`에서 검증된 사용자 ID를 사용한다.
+6. 로그아웃은 서버 세션 무효화, 쿠키 만료, 현재 브라우저 상태 정리까지 한다. **다른 기기의 세션은 명시적인 '모든 기기 로그아웃' 때만 철회**한다.
+7. 데이터 소유권은 `WHERE id = :id AND user_id = :authenticatedUserId`와 서비스 수준 검증을 결합한다.
+8. 로그인 시도는 IP + 사용자 식별자 기준으로 속도를 제한하고, 계정 열거를 막는다. 로그인 실패 로그에 비밀번호/전체 이메일을 남기지 않는다.
+9. 비밀번호는 **Argon2id 등 적절한 PasswordEncoder 해시**로 저장하고 재설정·변경 시 해시 업그레이드 정책을 적용한다.
+10. 초기 세션 권장값(예시): 비활동 만료 7일, 절대 사용 기간 30일. 금융 내보내기·계정 삭제·비밀번호 변경 등 민감 작업은 최근 로그인(예: 10분 이내) 또는 재인증 요구. 실제 세션 설정·사용성 테스트 후 확정.
+
+**주의:** Spring Security의 기본 `formLogin`은 일반적인 form 필드 중심이다. 아래 JSON `/auth/login` 계약을 적용하려면 맞춤 로그인 필터/엔드포인트를 구현하거나, 프런트에서 `application/x-www-form-urlencoded`를 사용하도록 계약을 통일해야 한다. **예시 API가 설정 없이 자동 작동한다고 가정하지 않는다.**
+
+### 29.5 데이터베이스 — 인증 테이블·마이그레이션 예시
+
+현재 16장의 `app_user`(기본 사용자 정보)는 유지하고 인증정보를 별도 관리한다. 다음은 **별도 Flyway 후속 마이그레이션 예시**이며 M0에서 구현할 최소 부분이다.
+
+```sql
+-- 예: V2__local_auth_and_onboarding.sql (실제 파일 버전은 기존 Flyway 이력 확인)
+CREATE TABLE auth_local_credential (
+  user_id UUID PRIMARY KEY REFERENCES app_user(id) ON DELETE CASCADE,
+  password_hash VARCHAR(255) NOT NULL,
+  password_changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  failed_attempts INTEGER NOT NULL DEFAULT 0,
+  locked_until TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT ck_auth_failed_attempts CHECK (failed_attempts >= 0)
+);
+
+ALTER TABLE app_user
+  ADD COLUMN onboarding_completed_at TIMESTAMPTZ;
+
+CREATE TABLE auth_security_event (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES app_user(id) ON DELETE SET NULL,
+  event_type VARCHAR(40) NOT NULL,
+  occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ip_hash VARCHAR(128),
+  request_id VARCHAR(100)
+);
+CREATE INDEX idx_auth_security_event_user_at
+  ON auth_security_event(user_id, occurred_at DESC);
+
+-- 선택: Spring Session JDBC를 쓸 때 세션 테이블은
+-- Spring Session 공식 스키마를 이관·관리하며 직접 임의 구조를 만들지 않는다.
+```
+
+M1에서 `email_verification_token`, `password_reset_token` 테이블을 도입할 때는 다음을 준수한다.
+
+- 메일 링크의 실제 무작위 토큰(최소 128비트 이상의 CSPRNG 엔트로피)은 DB에 **원문이 아닌 해시**로 저장한다.
+- `expires_at`, `consumed_at`, 사용자 ID, 발급 시각을 기록해 단회 사용/만료 검증을 한다.
+- 비밀번호 재설정 성공 시 기존 세션을 무효화하고 보안 알림을 전송한다(발송 수단이 연결된 경우).
+- 계정 상태 `PENDING_EMAIL_VERIFICATION`, `ACTIVE`, `LOCKED`, `DISABLED` 등의 전이를 정의한다. 기존 `app_user.status` 기본값 `ACTIVE`를 **공개 가입에서 그대로 사용하지 않는다**.
+- 이메일 표준화 정책은 단일 함수에서 적용하고 정상화 값에 대한 DB 유니크 제약으로 중복 생성을 막는다.
+
+### 29.6 REST API 요청·응답 계약
+
+| HTTP | Path | 로그인 필요 | 비고 |
+|---|---|---|---|
+| GET | `/api/v1/auth/csrf` | 아니오 | CSRF 초기화, Set-Cookie 또는 토큰 응답 정책 통일 |
+| POST | `/api/v1/auth/signup` | 아니오 | 초대 전용/공개 가입 정책과 유효성 검증 적용 |
+| POST | `/api/v1/auth/login` | 아니오 | 자격증명 검사, 세션 교체, 쿠키 응답 |
+| GET | `/api/v1/auth/session` | 아니오 | 로그인 시 200, 비로그인 시 401 |
+| POST | `/api/v1/auth/logout` | 예 | 세션 무효화 및 쿠키 만료 |
+| GET | `/api/v1/users/me` | 예 | 사용자 프로필·온보딩 진행 여부 |
+| PATCH | `/api/v1/users/me/settings` | 예 | 시간대/통화/표시 이름 변경 |
+| POST | `/api/v1/auth/password/forgot` | 아니오 | M1: 존재 여부 상관없이 동일 메시지·유사 응답시간 |
+| POST | `/api/v1/auth/password/reset` | 아니오 | M1: 유효·미사용 토큰으로 비밀번호 변경 |
+| POST | `/api/v1/auth/sessions/revoke-all` | 예 + 재인증 | M1: 전체 세션 철회 |
+
+**로그인 요청 예시 — JSON 로그인 핸들러를 실제 구현하는 경우**
+
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+X-CSRF-TOKEN: <서버에서 발급한 CSRF 토큰>
+
+{
+  "email": "person@example.com",
+  "password": "사용자가 입력한 비밀번호"
+}
+```
+
+**성공 응답 예시**
+
+```http
+HTTP/1.1 200 OK
+Set-Cookie: MT_SESSION=<opaque-session-id>; Path=/; HttpOnly; Secure; SameSite=Lax
+Cache-Control: no-store
+Content-Type: application/json
+
+{
+  "user": {
+    "id": "48b2d3f5-09c2-4620-989a-1d1808d6f935",
+    "displayName": "사용자",
+    "timezone": "Asia/Seoul",
+    "baseCurrency": "KRW"
+  },
+  "onboardingCompleted": false
+}
+```
+
+**실패 응답 예시**
+
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/problem+json
+Cache-Control: no-store
+
+{
+  "type": "about:blank",
+  "title": "Unauthorized",
+  "status": 401,
+  "code": "INVALID_CREDENTIALS",
+  "message": "이메일 또는 비밀번호를 확인해 주세요."
+}
+```
+
+- 공개 회원가입 API는 가입 허용 여부/이메일 검증 상태에 따라 `201` 또는 `202` 등의 계약을 확정한다.
+- `429 TOO_MANY_REQUESTS`는 요청 제한 오류. `Retry-After` 헤더를 사용할 수 있다.
+- 실사용 API 실패 응답에 입력된 비밀번호, 해시, 복구 토큰, 세션 ID를 포함하지 않는다.
+- 로그인 성공 시 클라이언트 쿠키를 직접 읽지 않고 `credentials: 'include'` 등의 브라우저 쿠키 전송 옵션을 사용한다(동일 출처 정책과 일치시킨다).
+
+### 29.7 프런트엔드 구현 포인트
+
+**파일 구성 제안**
+
+```text
+apps/web/src/
+  pages/
+    WelcomePage.vue
+    LoginPage.vue
+    SignupPage.vue
+    ForgotPasswordPage.vue       # M1
+    ResetPasswordPage.vue        # M1
+    OnboardingPage.vue
+    TodayPage.vue
+  router/
+    routes.ts
+    authGuard.ts
+  stores/
+    auth.ts                     # 로그인/세션/프로필 최소 상태
+  services/
+    authApi.ts                  # CSRF/login/logout/session
+  layouts/
+    PublicLayout.vue            # 로그인 전
+    AuthenticatedLayout.vue     # 로그인 후
+```
+
+**Route Guard 의사코드**
+
+```ts
+async function beforeEach(to) {
+  const auth = useAuthStore();
+  const result = await auth.ensureSessionChecked(); // /auth/session, 200/401/error 구별
+  if (result === 'network-error') return { name: 'network-error' };
+  if (to.meta.requiresAuth && result === 'unauthenticated') {
+    const path = to.fullPath;
+    return { path: '/login', query: { next: isSafeInternalPath(path) ? path : '/today' } };
+  }
+  if (result === 'authenticated' && to.meta.guestOnly) {
+    return { path: auth.onboarded ? '/today' : '/onboarding' };
+  }
+  if (result === 'authenticated' && !auth.onboarded && to.path !== '/onboarding') {
+    return { path: '/onboarding' };
+  }
+  return true;
+}
+```
+
+**실제 구현 시:** 모든 라우트에 `meta` 유형을 명시하고 공개 정적 화면에서 불필요한 서버 세션 호출을 하지 않도록 상태 초기화 횟수를 관리한다. 무한 리다이렉트를 막기 위한 `/onboarding`의 특수 처리를 포함한다.
+
+### 29.8 무료 운영 및 플랫폼별 보안·개인정보 원칙
+
+- **비용 0원 우선:** 로그인은 자체 DB + Spring Security로 구현하여 Google·Apple 유료 계정 구매 없이 동작하도록 한다.
+- 이메일 발송은 자동으로 무료가 되는 것이 아니다. SMTP/메일 발송량/도메인 소유 확인을 따로 검토하고, 첫 개인 베타는 초대/사전 발급 계정으로 운영한다.
+- iOS PWA는 Safari 홈 화면에 추가하여 실행하고 Android는 Chrome 홈 화면 설치를 사용한다. **탈옥, IPA 사이드로딩, 시스템 설정 우회가 필요 없다.**
+- 동일 계정 로그인을 쓰더라도 각 기기의 세션은 독립이며, 로그아웃은 기본적으로 현재 기기에서만 한다.
+- PWA/웹에서 금융 기록을 다루므로 화면 자동 완성·최근 앱 미리보기·공용 기기 로그아웃 UX 등을 검토한다.
+- 네이티브 앱으로 확장할 때는 Capacitor+시스템 브라우저 인증/OS 보안 저장소를 별도 설계한다. 현재 PWA용 세션 모델을 강제로 변경하지 않는다.
+- 무료 호스팅/무료 시세 API는 용량·라이선스·가용성 제한이 있을 수 있으므로 **서비스 운영 전체가 항상 무료임을 보장하지 않는다**.
+
+### 29.9 수용 기준 (QA 시나리오)
+
+- [ ] 첫 방문 시 로그인·회원가입 선택이 보이고 개인 홈/가계부 내용은 보이지 않는다.
+- [ ] 비로그인 사용자가 `/today`, `/money`, `/invest` URL을 직접 열어도 보호 화면과 개인 API가 모두 차단된다.
+- [ ] 유효한 사용자 로그인 성공 → 최초 1회 온보딩 → `/today` 표시.
+- [ ] 이미 온보딩한 사용자 재로그인 시 온보딩 반복 강제 없음.
+- [ ] 동일 계정으로 PC/iPhone/Android PWA에서 로그인하고 동일한 할 일과 지출을 조회할 수 있다.
+- [ ] 두 사용자 로그인 시 일정·할 일·금융·투자 데이터가 섞이지 않는다.
+- [ ] 세션 만료 후 개인 API `401`, 클라이언트 로그인 이동 및 데이터 초기화가 정상 작동한다.
+- [ ] 로그아웃 후 뒤로가기·새로고침·오프라인 재진입 시 다른 사용자 데이터가 표시되지 않는다.
+- [ ] CSRF 토큰이 없는 상태 변경 요청과 다른 출처 악의적 요청이 차단된다.
+- [ ] 로그인 실패, 가입 중복, 잘못된 이메일, 속도 제한, 네트워크 오류 메시지가 구별되며 사용자 열거를 유발하지 않는다.
+- [ ] 비밀번호 평문이나 세션 값이 로그·DB 평문 인증 컬럼·프런트 localStorage에 남지 않는다.
+- [ ] 복구 토큰은 만료/재사용/무차별 대입에 대응하며 계정 존재 여부를 노출하지 않는다(M1).
+- [ ] 공개 회원가입을 열 경우 이메일 검증 후에만 활성화되고 재설정 메일 발송이 동작한다.
+- [ ] iPhone Safari(홈 화면 추가 포함)와 Android Chrome에서 키보드, 입력 포커스, Safe Area, PWA 재실행을 테스트한다.
+
+### 29.10 개발 티켓 분할 및 수순
+
+| 순서 | 이슈 | 작업 | 완료 조건 |
+|---|---|---|---|
+| 1 | AUTH-001 | PublicLayout, Welcome/Login/Signup, Router Guard | 비인증 첫 화면·보호 경로 UX 완성 |
+| 2 | AUTH-002 | LocalCredentials, PasswordEncoder, Spring Security, 세션·CSRF | 회원가입·로그인·로그아웃 동작 및 보안 테스트 |
+| 3 | AUTH-003 | 온보딩, 프로필, 시간대·통화 | 로그인 최초 1회 설정 후 오늘 홈 진입 |
+| 4 | AUTH-004 | IDOR 방지·입력 검증·속도 제한·보안 이벤트 | 두 계정 격리·무차별 대입 테스트 통과 |
+| 5 | AUTH-005 | SMTP, 이메일 검증, 비밀번호 재설정 | 공개 가입 전 필수 게이트 충족(M1) |
+| 6 | AUTH-006 | 세션 목록·전체 로그아웃, 재인증 | 분실기기 세션 철회 검증(M1) |
+| 7 | AUTH-007 | Google OIDC/Passkey 선택 확장 | 인증 방식 변경 시 계정 연결 안전성 테스트(M2) |
+
+**고정 UX 결정:** 제품의 첫 화면은 개인 대시보드가 아니라 **로그인 게이트**이다. 로그인/회원가입 이후 온보딩을 거쳐 오늘 대시보드로 진입한다. 재방문 시 세션이 유효하면 다시 로그인할 필요가 없다.
+
+---
+
 ## 부록 A. 1분 사용 시나리오(출시 UX 검증)
 
 ```text
-앱 열기
+앱 열기 → 유효 세션 확인
+  ↓
+세션 없음: 로그인/회원가입 → 첫 설정(최초 1회)
   ↓
 오늘 일정 / 할 일 / 예산 / 주가를 한 화면에서 파악
   ↓
@@ -1866,4 +2888,4 @@ MY TODAY의 경쟁력은 단순히 **할 일+가계부+주식 앱을 합쳤다**
 - 기존 저장소 README는 제품 소개용으로 짧게 유지하고 이 문서가 상세 명세를 맡는다.
 - 명세에 나온 API 예시·SQL·디렉터리 구조는 구현 착수 기준 초안이며 **프로덕션 코드 검증을 대체하지 않는다**.
 
-**끝.**
+**끝. v1.2.0 — 무료 PWA 우선·최초 로그인·회원가입·온보딩·인증 보안 반영.**
