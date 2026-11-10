@@ -4,6 +4,8 @@
 
 상세 제품 설계서는 [docs/MASTER_SPEC.md](docs/MASTER_SPEC.md)에 원문을 보존했습니다. 화면 기준은 [DESIGN.md](DESIGN.md), 현재 구현 범위는 [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md)를 참고하세요.
 
+**기술 스택과 개발 상세:** [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)에 실제 사용 버전, 전체 구조, 기능별 구현·DB·보안·실행·테스트 방법을 정리했습니다.
+
 ## 현재 구현
 
 Vue 3·Quasar·TypeScript 웹, Java 21·Spring Boot API, PostgreSQL·Flyway, 초대 가입·로그인·게스트 체험·CSRF·세션·최초 설정·로그아웃, ADMIN/USER 권한, 관리자 회원·초대 조회, 할 일·일정·성장·가계부·투자 관리, 오늘 대시보드, PWA 정적 자산 캐시, 로컬 Compose와 CI 구성을 제공합니다.
