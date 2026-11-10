@@ -11,7 +11,7 @@
 | PostgreSQL | 17.11 |
 | 접속 | `aws-0-ap-northeast-2.pooler.supabase.com:5432` · Session pooler |
 | 앱 계정 | `mytoday_app.hxckrcnpgoulcxijgrll` |
-| 앱 스키마 | `mytoday` · Flyway V1–V3 적용 완료 |
+| 앱 스키마 | `mytoday` · Flyway V1–V6 적용 완료 |
 
 [프로젝트 대시보드](https://supabase.com/dashboard/project/hxckrcnpgoulcxijgrll). 기존 다른 프로젝트는 변경하지 않았다. 무료 리소스의 사용량·정책 변경으로 영구 0원을 보장한다는 뜻은 아니다.
 
@@ -47,7 +47,7 @@ EXTERNAL_DB_PASSWORD=<서버 전용 비밀 값>
 
 CA는 [공식 Dashboard 설정](https://github.com/supabase/supabase/blob/master/apps/studio/hooks/custom-content/custom-content.json)이 지정한 [공개 다운로드](https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt)에서 받았다. 인증서는 비밀 키가 아니며 만료일은 2031-04-26, SHA-256은 `807025AD50D4ED219D2C9C7D299C004F824EB00CF7F65AFEF607D07B72E6CAFA`다. 공급자가 CA를 교체하거나 만료되기 전에 공식 배포본을 다시 확인한다. [Supabase SSL 안내](https://supabase.com/docs/guides/platform/ssl-enforcement)
 
-Supabase 연결로 다시 실행하는 명령은 다음과 같다. Flyway는 이미 적용된 V1–V3를 검증하고 이후의 새 마이그레이션만 적용한다.
+Supabase 연결로 다시 실행하는 명령은 다음과 같다. Flyway는 이미 적용된 V1–V6를 검증하고 이후의 새 마이그레이션만 적용한다.
 
 ```bash
 docker compose --env-file .env --env-file .env.supabase \
@@ -67,7 +67,7 @@ docker compose --env-file .env --env-file .env.supabase \
 
 현재 필요한 연결은 **Supabase**다. MCP는 프로젝트·설정 관리에 사용하며 앱 실행 중의 DB 연결은 JDBC가 담당한다. 이번에는 기존 관리자 암호를 읽거나 초기화하지 않고 앱 전용 계정과 비밀번호를 새로 구성했다.
 
-MCP에 풀러 주소 조회 도구가 없어, 승인된 Supabase OAuth 인증으로 공식 관리 API의 풀러 설정을 읽어 주소를 확인했다. 초기 MCP 토큰 갱신 오류도 OAuth 재인증 후 복구했다. 인증 토큰은 저장소나 명령 인수에 넣지 않았다. 현재 MCP의 프로젝트·SQL 조회는 정상 동작한다.
+풀러 주소는 공식 관리 API의 설정으로 확인했다. 인증 토큰은 저장소나 명령 인수에 넣지 않았다. 2026-11-10 MCP의 OAuth 갱신 오류로 직접 SQL 재조회는 하지 못했으며, 실행 중인 API의 Flyway 로그에서 V4–V6 적용 성공을 확인했다.
 
 Vercel은 이 DB 연결에 필수가 아니다. Vercel의 DB는 Marketplace의 Supabase·Neon 등 외부 공급자를 사용한다. [Vercel 데이터베이스](https://vercel.com/docs/postgres)
 
@@ -78,7 +78,7 @@ Vercel은 이 DB 연결에 필수가 아니다. Vercel의 DB는 Marketplace의 S
 - MCP 등록·OAuth 인증·조직/프로젝트 조회·조직 Free 플랜 확인: 성공.
 - 원격 전용 프로젝트: 무료 플랜·서울 리전 `ACTIVE_HEALTHY` 확인.
 - 앱 계정·스키마: 최소 권한과 익명 접근 차단을 MCP로 확인. 관리자 암호는 변경하지 않음.
-- 실제 TLS·JDBC·Flyway: 공식 CA와 호스트 검증을 적용해 연결 성공, V1–V3 성공 확인.
+- 실제 TLS·JDBC·Flyway: 공식 CA와 호스트 검증을 적용해 연결 성공, V1–V6 성공 확인.
 - 실제 Chrome E2E: 가입·로그인·설정·로그아웃과 오늘 할 일 완료·내일 일정 저장 2개 시나리오 통과.
 - Docker 앱: 8088에서 생성한 기록을 Supabase에서 직접 조회해 저장 위치 확인. API·웹 모두 healthy.
 - 권한·테스트 정리: 실제 ADMIN/USER 경계와 개인 기록 격리 확인. 테스트 USER 2명과 그 기록 삭제, 운영 ADMIN 1명·USER 0명·할 일 0건·일정 0건 확인.
