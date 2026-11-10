@@ -2,7 +2,7 @@ export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message) }
 }
 export interface Session {
-  user: { id: string; email: string; displayName: string; timezone: string; baseCurrency: string; role: 'ADMIN' | 'USER' }
+  user: { id: string; email: string; displayName: string; timezone: string; baseCurrency: string; role: 'ADMIN' | 'USER'; guest: boolean }
   onboardingCompleted: boolean
 }
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {

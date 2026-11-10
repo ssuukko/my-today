@@ -42,10 +42,10 @@ public class IdentityController {
             @NotBlank @Size(max=72) String password) {}
     public record Settings(@NotBlank @Size(max=80) String displayName,
             @NotBlank @Size(max=64) String timezone, @NotBlank @Size(min=3,max=3) String baseCurrency) {}
-    public record User(UUID id, String email, String displayName, String timezone, String baseCurrency, String role) {}
+    public record User(UUID id, String email, String displayName, String timezone, String baseCurrency, String role, boolean guest) {}
     public record Session(User user, boolean onboardingCompleted) {}
     private record Account(UUID id, String email, String passwordHash, String displayName,
-            String timezone, String baseCurrency, boolean onboardingCompleted, String role) {}
+            String timezone, String baseCurrency, boolean onboardingCompleted, String role, OffsetDateTime guestExpiresAt) {}
 
     @GetMapping("/auth/csrf")
     Map<String,String> csrf(CsrfToken token) { return Map.of("token", token.getToken(), "headerName", token.getHeaderName()); }
@@ -73,14 +73,28 @@ public class IdentityController {
         var account = db.sql("SELECT * FROM app_user WHERE email=:email").param("email",normalize(body.email())).query(Account.class).optional();
         boolean matches = encoder.matches(body.password(), account.map(Account::passwordHash).orElse(dummyHash));
         if (account.isEmpty() || !matches) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"이메일 또는 비밀번호를 확인해 주세요.");
+        return establish(account.get(),request,response);
+    }
+    @PostMapping("/auth/guest")
+    Session guest(HttpServletRequest request, HttpServletResponse response) {
+        limiter.check("guest:"+request.getRemoteAddr());
+        UUID id=UUID.randomUUID();
+        db.sql("INSERT INTO app_user(id,email,password_hash,display_name,role,onboarding_completed,guest_expires_at) "
+            + "VALUES(:id,:email,:hash,'게스트','USER',true,CURRENT_TIMESTAMP + INTERVAL '24 hours')")
+            .param("id",id).param("email","guest-"+id+"@guest.mytoday.local")
+            .param("hash",encoder.encode(UUID.randomUUID().toString())).update();
+        Account account=db.sql("SELECT * FROM app_user WHERE id=:id").param("id",id).query(Account.class).single();
+        return establish(account,request,response);
+    }
+    private Session establish(Account account,HttpServletRequest request,HttpServletResponse response) {
         request.getSession(); request.changeSessionId();
         var context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(account.get().id().toString(), null, List.of()));
+        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(account.id().toString(), null, List.of()));
         SecurityContextHolder.setContext(context);
         new HttpSessionSecurityContextRepository().saveContext(context,request,response);
         new org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository().saveToken(null,request,response);
         request.getSession().setAttribute("authenticatedAt",Instant.now());
-        return session(account.get());
+        return session(account);
     }
     @GetMapping({"/auth/session","/users/me"})
     Session me(Authentication authentication) { return session(owned(authentication)); }
@@ -98,6 +112,6 @@ public class IdentityController {
         return db.sql("SELECT * FROM app_user WHERE id=:id").param("id",UUID.fromString(auth.getName())).query(Account.class).optional()
             .orElseThrow(()->new ResponseStatusException(HttpStatus.UNAUTHORIZED,"로그인이 필요합니다."));
     }
-    private Session session(Account a) { return new Session(new User(a.id(),a.email(),a.displayName(),a.timezone(),a.baseCurrency(),a.role()),a.onboardingCompleted()); }
+    private Session session(Account a) { return new Session(new User(a.id(),a.email(),a.displayName(),a.timezone(),a.baseCurrency(),a.role(),a.guestExpiresAt()!=null),a.onboardingCompleted()); }
     private String normalize(String email) { return email.trim().toLowerCase(Locale.ROOT); }
 }

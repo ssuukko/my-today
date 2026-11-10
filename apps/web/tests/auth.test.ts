@@ -24,7 +24,7 @@ describe('server session', () => {
     const store = useSession()
     await store.refresh()
     expect(store.checked).toBe(true); expect(store.session).toBeNull(); expect(store.unavailable).toBe(false)
-    store.session = { user: { id: 'user-a', email: 'a@example.test', displayName: 'A', timezone: 'UTC', baseCurrency: 'KRW', role: 'USER' }, onboardingCompleted: true }
+    store.session = { user: { id: 'user-a', email: 'a@example.test', displayName: 'A', timezone: 'UTC', baseCurrency: 'KRW', role: 'USER', guest: false }, onboardingCompleted: true }
     fetch.mockRejectedValueOnce(new TypeError('offline'))
     await expect(store.refresh()).rejects.toThrow('offline')
     expect(store.session).toBeNull(); expect(store.checked).toBe(false); expect(store.unavailable).toBe(true)

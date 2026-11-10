@@ -7,12 +7,15 @@
 | GET `/auth/csrf` | `{token,headerName}`. 모든 변경 요청 전에 발급받아 지정된 헤더에 전송 |
 | POST `/auth/signup` | `{email,password,passwordConfirmation,displayName,inviteToken}` → 201 `{id}` |
 | POST `/auth/login` | `{email,password}` → 세션 응답 |
+| POST `/auth/guest` | 빈 요청, CSRF 필수 → 독립 임시 USER 계정과 세션 응답 |
 | GET `/auth/session` | 인증 시 세션 응답, 비인증 401 |
 | POST `/auth/logout` | CSRF 필수, 세션 무효화·쿠키 만료, 204 |
 | GET `/users/me` | 세션 응답, 인증 필수 |
 | PATCH `/users/me/settings` | `{displayName,timezone,baseCurrency}` → 세션 응답, 최초 설정 완료 처리 |
 
 세션 응답: `{user:{id,email,displayName,timezone,baseCurrency,role},onboardingCompleted}`. `role`은 `USER` 또는 `ADMIN`입니다. 회원가입은 항상 USER이며 요청의 역할 값으로 승격할 수 없습니다. 시간대는 IANA 이름, 통화는 ISO 4217 코드입니다. 비밀번호는 12자 이상·UTF-8 72바이트 이하이며 BCrypt 해시로만 저장합니다. 초대 코드 미설정 또는 불일치 시 가입이 차단됩니다. CSRF 토큰은 로그인 이후 다시 발급받습니다.
+
+게스트 응답에는 `user.guest=true`가 추가됩니다. 일반 계정은 false입니다. 게스트는 온보딩 없이 입장하며 24시간 뒤 모든 개인 API 접근이 만료되고 기록은 주기적으로 정리됩니다.
 
 ## 관리자 API
 

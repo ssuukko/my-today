@@ -14,6 +14,18 @@ const timezone = ref(store.session?.user.timezone || 'Asia/Seoul')
 const currency = ref(store.session?.user.baseCurrency || 'KRW')
 const showPassword = ref(false), busy = ref(false), error = ref(''), success = ref('')
 const errorRegion = ref<HTMLElement>()
+async function enterGuest() {
+  if (busy.value) return
+  busy.value = true; error.value = ''
+  try {
+    store.session = await api<Session>('/auth/guest', { method: 'POST' })
+    store.checked = true
+    await router.push(safeNext(route.query.next, 'USER'))
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '체험을 시작하지 못했습니다. 다시 시도해 주세요.'
+    await nextTick(); errorRegion.value?.focus()
+  } finally { busy.value = false }
+}
 watch(mode, () => { error.value = ''; success.value = ''; password.value = ''; confirmation.value = ''; invite.value = ''; if (mode.value === 'onboarding') { displayName.value = store.session?.user.displayName || ''; timezone.value = store.session?.user.timezone || 'Asia/Seoul'; currency.value = store.session?.user.baseCurrency || 'KRW' } })
 const title = computed(() => ({ login: '다시 만나서 반가워요', signup: '나만의 오늘을 시작해요', onboarding: '당신에게 맞는 오늘', privacy: '개인정보 안내' })[mode.value] || '오늘을 조금 더 나답게.')
 async function submit() {
@@ -59,9 +71,12 @@ async function submit() {
           <div class="welcome-features"><div><span class="feature-number">01</span><div><strong>오늘에 집중하기</strong><p>일정과 할 일을 한눈에 정리해요.</p></div></div><div><span class="feature-number">02</span><div><strong>꾸준함을 기록하기</strong><p>실제 활동을 모아 나의 성장을 돌아봐요.</p></div></div><div><span class="feature-number">03</span><div><strong>일상을 연결하기</strong><p>시간과 돈, 목표를 하나의 공간에 담아요.</p></div></div></div>
           <q-btn to="/login" label="로그인" color="primary" unelevated class="full-width" />
           <q-btn to="/signup" label="초대받아 시작하기" outline color="primary" class="full-width q-mt-sm" />
+          <q-btn label="게스트로 체험하기" flat color="primary" class="full-width q-mt-sm" :loading="busy" @click="enterGuest" />
+          <p v-if="error" ref="errorRegion" role="alert" aria-live="polite" tabindex="-1" class="error-message">{{ error }}</p>
+          <p class="field-hint">게스트 기록은 다른 사용자와 분리되며 24시간 후 만료됩니다. 계속 사용하려면 초대 가입으로 새 계정을 만드세요.</p>
           <p class="auth-note">현재는 초대받은 사용자만 가입할 수 있습니다.</p>
         </template>
-        <template v-else-if="mode === 'privacy'"><p class="intro">이 서비스는 개인용 개발 베타입니다.</p><p>이메일, 암호화된 비밀번호 해시, 표시 이름과 시간대·통화 설정을 서버에 저장합니다. 비밀번호 원문은 저장하지 않습니다. 로그인 쿠키는 세션 인증에 사용하며 개인 API 응답은 오프라인 캐시에 저장하지 않습니다.</p><p>공개 가입과 자동 계정 복구는 제공하지 않습니다. 데이터 삭제 및 계정 지원은 초대를 제공한 운영자에게 요청해 주세요.</p><q-btn to="/welcome" outline color="primary" label="시작 화면" /></template>
+        <template v-else-if="mode === 'privacy'"><p class="intro">이 서비스는 개인용 개발 베타입니다.</p><p>이메일, 암호화된 비밀번호 해시, 표시 이름과 시간대·통화 설정을 서버에 저장합니다. 비밀번호 원문은 저장하지 않습니다. 게스트 기록은 별도 임시 계정에 저장하고 24시간 후 접근이 만료됩니다. 로그인 쿠키는 세션 인증에 사용하며 개인 API 응답은 오프라인 캐시에 저장하지 않습니다.</p><p>공개 가입과 자동 계정 복구는 제공하지 않습니다. 데이터 삭제 및 계정 지원은 초대를 제공한 운영자에게 요청해 주세요.</p><q-btn to="/welcome" outline color="primary" label="시작 화면" /></template>
         <form v-else @submit.prevent="submit">
           <p class="intro">{{ mode === 'login' ? '이메일로 로그인하고 나의 하루를 이어가세요.' : mode === 'signup' ? '초대 코드를 입력해 나만의 공간을 만드세요.' : '기본 설정을 마치면 오늘을 시작할 수 있어요.' }}</p>
           <div v-if="success" class="success-message" role="status">{{ success }}</div>
@@ -75,7 +90,7 @@ async function submit() {
           </template>
           <template v-else><q-select v-model="timezone" outlined label="시간대" :options="['Asia/Seoul', 'Asia/Tokyo', 'America/New_York', 'America/Los_Angeles', 'Europe/London', 'UTC']" class="q-mb-md" /><q-select v-model="currency" outlined label="기본 통화" :options="['KRW', 'USD', 'JPY', 'EUR', 'GBP']" class="q-mb-lg" /></template>
           <q-btn type="submit" :label="mode === 'login' ? '로그인' : mode === 'signup' ? '계정 만들기' : '오늘 시작하기'" :loading="busy" unelevated color="primary" class="full-width" />
-          <p v-if="mode === 'login'" class="auth-note">처음 오셨나요? <RouterLink to="/signup">초대 가입</RouterLink><br><span class="recovery-note">계정 복구는 초대를 제공한 운영자에게 문의해 주세요.</span></p>
+          <p v-if="mode === 'login'" class="auth-note">처음 오셨나요? <RouterLink to="/signup">초대 가입</RouterLink><br><q-btn label="게스트로 체험하기" flat color="primary" :loading="busy" @click="enterGuest" /><br><span class="recovery-note">계정 복구는 초대를 제공한 운영자에게 문의해 주세요.</span></p>
           <p v-if="mode === 'signup'" class="auth-note">이미 계정이 있나요? <RouterLink to="/login">로그인</RouterLink></p>
         </form>
       </div><footer class="auth-footer">© {{ new Date().getFullYear() }} MY TODAY <RouterLink to="/privacy">개인정보 안내</RouterLink></footer>
