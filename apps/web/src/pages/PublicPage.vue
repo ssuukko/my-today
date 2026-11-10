@@ -43,7 +43,11 @@ async function submit() {
       await router.push(store.session.onboardingCompleted ? destination : { path: '/onboarding', query: { next: destination } })
     } else {
       await api('/users/me/settings', { method: 'PATCH', body: JSON.stringify({ displayName: displayName.value, timezone: timezone.value, baseCurrency: currency.value }) })
-      await store.refresh(); await router.push(safeNext(route.query.next, store.session?.user.role))
+      await store.refresh()
+      if (store.session?.user.role === 'USER' && !store.session.user.guest) {
+        try { sessionStorage.setItem('mytoday-first-welcome', store.session.user.id) } catch { /* Storage can be unavailable in private browsing. */ }
+      }
+      await router.push(safeNext(route.query.next, store.session?.user.role))
     }
     password.value = ''; confirmation.value = ''; invite.value = ''
   } catch (err) {

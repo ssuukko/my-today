@@ -224,6 +224,7 @@ test('real API saves today tasks and tomorrow events after signup', async ({ pag
   await expect(page).toHaveURL(/\/onboarding(?:\?.*)?$/)
   await page.getByRole('button', { name: '오늘 시작하기', exact: true }).click()
   await expect(page).toHaveURL(/\/today$/)
+  await page.getByRole('button', { name: '나중에', exact: true }).click()
   await page.getByRole('button', { name: '할 일 추가', exact: true }).click()
   await page.getByLabel('할 일 제목', { exact: true }).fill('오늘 계획 검증')
   await page.getByRole('button', { name: '저장', exact: true }).click()

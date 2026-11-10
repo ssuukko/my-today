@@ -39,6 +39,8 @@ test('real API invitation, login, onboarding, profile and logout', async ({ page
   await expect(page).toHaveURL(/\/onboarding/)
   await page.getByRole('button', { name: '오늘 시작하기' }).click()
   await expect(page).toHaveURL(/\/today$/)
+  await expect(page.getByRole('heading', { name: '테스트 사용자님, 시작을 축하해요!' })).toBeVisible()
+  await page.getByRole('button', { name: '나중에' }).click()
   await expect(page.getByRole('heading', { name: /테스트 사용자님/ })).toBeVisible()
   await page.goto('/settings')
   await expect(page.getByText(email, { exact: true })).toBeVisible()

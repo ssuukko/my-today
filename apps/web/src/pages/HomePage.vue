@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useSession } from '../stores/session'
 import { ApiError, api } from '../api/client'
@@ -8,6 +8,7 @@ import AdminPage from './AdminPage.vue'
 import GrowthPage from './GrowthPage.vue'
 import MoneyPage from './MoneyPage.vue'
 import InvestPage from './InvestPage.vue'
+import WelcomeGuide from '../components/WelcomeGuide.vue'
 const store = useSession(), route = useRoute(), router = useRouter()
 const nav = [{ path: '/today', label: '오늘', icon: '◷' }, { path: '/calendar', label: '일정', icon: '▦' }, { path: '/tasks', label: '할 일', icon: '☑' }, { path: '/growth', label: '성장', icon: '↗' }, { path: '/money', label: '가계부', icon: '₩' }, { path: '/invest', label: '투자', icon: '▥' }]
 const current = computed(() => route.path === '/admin' ? '관리자' : nav.find(n => n.path === route.path)?.label || '설정')
@@ -16,6 +17,16 @@ const displayName = ref(store.session?.user.displayName || '')
 const timezone = ref(store.session?.user.timezone || 'Asia/Seoul')
 const baseCurrency = ref(store.session?.user.baseCurrency || 'KRW')
 const notice = ref('')
+const guideOpen = ref(false), firstWelcome = ref(false)
+onMounted(() => {
+  try {
+    if (sessionStorage.getItem('mytoday-first-welcome') === store.session?.user.id) {
+      sessionStorage.removeItem('mytoday-first-welcome')
+      firstWelcome.value = true; guideOpen.value = true
+    }
+  } catch { /* A blocked storage API must not block the app. */ }
+})
+function openGuide() { firstWelcome.value = false; guideOpen.value = true }
 async function logout() {
   busy.value = true; error.value = ''
   try { await store.logout(); await router.replace('/welcome') }
@@ -35,9 +46,9 @@ async function save() {
 </script>
 <template>
   <div v-if="store.session" class="app-shell">
-    <aside class="sidebar"><RouterLink to="/today" class="brand">MY<span>TODAY</span>.</RouterLink><div class="sidebar-caption">MY DAILY SPACE</div><nav aria-label="주 메뉴"><RouterLink v-for="item in nav" :key="item.path" :to="item.path" :class="{ active: route.path === item.path }"><span aria-hidden="true">{{ item.icon }}</span>{{ item.label }}</RouterLink></nav><div class="sidebar-bottom"><span class="beta-badge">PERSONAL BETA</span><p>나의 속도로, 나의 오늘을.</p><RouterLink to="/settings">⚙ 설정</RouterLink></div></aside>
+    <aside class="sidebar"><RouterLink to="/today" class="brand">MY<span>TODAY</span>.</RouterLink><div class="sidebar-caption">MY DAILY SPACE</div><nav aria-label="주 메뉴"><RouterLink v-for="item in nav" :key="item.path" :to="item.path" :class="{ active: route.path === item.path }"><span aria-hidden="true">{{ item.icon }}</span>{{ item.label }}</RouterLink></nav><div class="sidebar-bottom"><span class="beta-badge">PERSONAL BETA</span><p>나의 속도로, 나의 오늘을.</p><q-btn flat label="사용 가이드" class="guide-open-button" @click="openGuide" /><RouterLink to="/settings">⚙ 설정</RouterLink></div></aside>
     <main class="workspace"><header class="topbar"><span>{{ current }}</span><div><span class="profile-avatar">{{ store.session.user.displayName.slice(0, 1) }}</span><span class="topbar-name">{{ store.session.user.displayName }}</span><span class="tag account-role">{{ store.session.user.guest ? '게스트 · 24시간 체험' : store.session.user.role === 'ADMIN' ? '관리자' : '일반 사용자' }}</span><q-btn v-if="store.session.user.role === 'ADMIN'" to="/admin" flat label="관리자 화면" /><q-btn flat label="로그아웃" :loading="busy" @click="logout" /></div></header>
-      <nav class="mobile-secondary-nav" aria-label="추가 메뉴"><RouterLink to="/growth">성장</RouterLink><RouterLink to="/invest">투자</RouterLink><RouterLink to="/settings">설정</RouterLink></nav>
+      <nav class="mobile-secondary-nav" aria-label="추가 메뉴"><RouterLink to="/growth">성장</RouterLink><RouterLink to="/invest">투자</RouterLink><RouterLink to="/settings">설정</RouterLink><q-btn flat label="사용 가이드" @click="openGuide" /></nav>
       <div class="workspace-body"><div v-if="store.session.user.guest" class="daily-note"><div><strong>게스트 체험 중</strong><p>기록은 24시간 동안만 열람할 수 있으며 일반 계정으로 옮겨지지 않습니다.</p></div></div><div v-if="error" role="alert" class="error-message">{{ error }}</div>
         <PlanningPage v-if="['/today', '/tasks', '/calendar'].includes(route.path)" :key="route.path" />
         <AdminPage v-else-if="route.path === '/admin'" />
@@ -49,5 +60,6 @@ async function save() {
         <footer class="workspace-footer">완벽하지 않아도 괜찮아요. 오늘도 나의 속도로.</footer>
       </div>
     </main><nav class="mobile-nav" aria-label="모바일 메뉴"><RouterLink v-for="item in nav.filter(n => ['/today', '/calendar', '/tasks', '/money'].includes(n.path))" :key="item.path" :to="item.path" :class="{ active: route.path === item.path }"><span aria-hidden="true">{{ item.icon }}</span>{{ item.label }}</RouterLink><RouterLink to="/settings"><span aria-hidden="true">⚙</span>설정</RouterLink></nav>
+    <WelcomeGuide v-if="guideOpen" :first="firstWelcome" :name="store.session.user.displayName" @close="guideOpen = false" />
   </div>
 </template>
