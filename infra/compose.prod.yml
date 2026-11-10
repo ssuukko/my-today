@@ -1,0 +1,46 @@
+# Override local configuration: docker compose --env-file .env -f infra/compose.local.yml -f infra/compose.prod.yml up -d --build
+name: mytoday-prod
+
+services:
+  api:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SESSION_COOKIE_SECURE: 'true'
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+  web:
+    ports: !reset []
+    volumes:
+      - ./reverse-proxy/trusted-ingress.conf:/etc/nginx/trusted-proxy/ingress.conf:ro
+    networks:
+      default:
+      ingress:
+        ipv4_address: 172.30.88.3
+  edge:
+    image: caddy:2.10.2-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN to a public hostname for HTTPS}
+    volumes:
+      - ./reverse-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      ingress:
+        ipv4_address: 172.30.88.2
+
+networks:
+  ingress:
+    ipam:
+      config:
+        - subnet: 172.30.88.0/29
+
+volumes:
+  caddy-data:
+  caddy-config:
+

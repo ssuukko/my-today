@@ -1,0 +1,14 @@
+# Opt in with compose.local.yml; the local DB and its volume remain untouched.
+services:
+  api:
+    environment:
+      DB_URL: ${EXTERNAL_DB_URL:?Set EXTERNAL_DB_URL in .env.supabase}
+      DB_USERNAME: ${EXTERNAL_DB_USERNAME:?Set EXTERNAL_DB_USERNAME in .env.supabase}
+      DB_PASSWORD: ${EXTERNAL_DB_PASSWORD:?Set EXTERNAL_DB_PASSWORD in .env.supabase}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
+      SPRING_FLYWAY_SCHEMAS: mytoday
+      SPRING_FLYWAY_DEFAULT_SCHEMA: mytoday
+      SPRING_DATASOURCE_HIKARI_SCHEMA: mytoday
+    volumes:
+      - ./certs/supabase-ca.crt:/run/certs/supabase-ca.crt:ro
+    depends_on: !reset {}

@@ -1,0 +1,10 @@
+CREATE TABLE app_user (
+ id UUID PRIMARY KEY,
+ email VARCHAR(254) NOT NULL UNIQUE,
+ password_hash VARCHAR(255) NOT NULL,
+ display_name VARCHAR(80) NOT NULL,
+ timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Seoul',
+ base_currency CHAR(3) NOT NULL DEFAULT 'KRW',
+ onboarding_completed BOOLEAN NOT NULL DEFAULT false,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,0 +1,62 @@
+name: mytoday-local
+
+services:
+  db:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mytoday}
+      POSTGRES_USER: ${POSTGRES_USER:-mytoday_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      DB_USERNAME: ${DB_USERNAME:-mytoday}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init-app.sh:/docker-entrypoint-initdb.d/10-init-app.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../services/api
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-mytoday}
+      DB_USERNAME: ${DB_USERNAME:-mytoday}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      REGISTRATION_INVITE_TOKEN: ${REGISTRATION_INVITE_TOKEN:?Set REGISTRATION_INVITE_TOKEN in .env}
+      SESSION_COOKIE_SECURE: 'false'
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:8080/actuator/health]
+      start_period: 40s
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - '127.0.0.1:${WEB_PORT:-8088}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1/healthz]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+
